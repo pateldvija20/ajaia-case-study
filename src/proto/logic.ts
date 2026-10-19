@@ -1,5 +1,5 @@
 import { DEMO_START, USER } from './mockData'
-import type { Decision, Submission } from './types'
+import type { ChecklistItem, Decision, Submission } from './types'
 
 const DAY_FMT = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
 
@@ -17,34 +17,37 @@ export function daysWaiting(sub: Submission, day: number) {
   return sub.waitingSince === undefined ? 0 : Math.max(0, day - sub.waitingSince)
 }
 
-export function isOverdue(sub: Submission, day: number, threshold: number) {
+export function isOverdue(sub: Submission, day: number) {
   if (sub.status !== 'waiting' || sub.lastContact === undefined) return false
   if (sub.snoozedUntil !== undefined && day < sub.snoozedUntil) return false
-  return day - sub.lastContact >= threshold
+  return day - sub.lastContact >= sub.followUpDays
 }
 
-/** Lower is more urgent. */
-export function urgency(sub: Submission, day: number, threshold: number) {
-  switch (sub.status) {
-    case 'mismatch':
-      return 0
-    case 'missing':
-      return 1
-    case 'waiting':
-      return isOverdue(sub, day, threshold) ? 2 : 3
-    case 'ready':
-      return 4
-    default:
-      return 9
-  }
+/** The one-word status shown everywhere. Overdue is Waiting past this policy's threshold. */
+export type DisplayStatus = 'mismatch' | 'missing' | 'overdue' | 'waiting' | 'ready' | 'bound'
+export const STATUS_ORDER: DisplayStatus[] = ['mismatch', 'missing', 'overdue', 'waiting', 'ready', 'bound']
+export const STATUS_WORD: Record<DisplayStatus, string> = {
+  mismatch: 'Mismatch',
+  missing: 'Missing',
+  overdue: 'Overdue',
+  waiting: 'Waiting',
+  ready: 'Ready',
+  bound: 'Bound',
 }
 
-export function sortByUrgency(subs: Submission[], day: number, threshold: number) {
-  return [...subs].sort((a, b) => {
-    const u = urgency(a, day, threshold) - urgency(b, day, threshold)
-    if (u !== 0) return u
-    return daysWaiting(b, day) - daysWaiting(a, day)
-  })
+export function displayStatus(sub: Submission, day: number): DisplayStatus {
+  if (sub.status === 'waiting' && isOverdue(sub, day)) return 'overdue'
+  return sub.status
+}
+
+/** Next day the follow-up prompt fires. */
+export function nextPrompt(sub: Submission) {
+  const base = (sub.lastContact ?? 0) + sub.followUpDays
+  return sub.snoozedUntil !== undefined ? Math.max(base, sub.snoozedUntil) : base
+}
+
+export function inRange(day: number | undefined, range: [number, number]) {
+  return day !== undefined && day >= range[0] && day <= range[1]
 }
 
 export const decisionKey = (subId: string, diffId: string) => `${subId}:${diffId}`
@@ -106,4 +109,41 @@ export function buildFollowUpDraft(sub: Submission) {
     `Thanks,`,
     `${USER.name}`,
   ].join('\n')
+}
+
+const BASE_CHECKLIST = [
+  'Signed application',
+  'Statement of values',
+  'Certificate of insurance',
+  'Loss runs (5 years)',
+  'Named insured matches',
+  'Policy period matches',
+  'Coverage limits match the application',
+  'Prior carrier',
+  'Years in business',
+  'Premises address',
+  'Payment plan',
+  'Producer of record',
+]
+
+/** What each waiting submission is still missing, keyed by submission. */
+const OPEN_ITEM: Record<string, { label: string; detail: string }> = {
+  alder: { label: 'Statement of values', detail: 'Updated version requested from the broker' },
+  harborview: { label: 'Driver schedule', detail: 'Requested from the broker' },
+  kestrel: { label: 'Signed payroll schedule', detail: 'Requested from the broker' },
+}
+
+/** The Bindwise checklist for any submission, derived from its state. */
+export function getChecklist(sub: Submission): ChecklistItem[] {
+  if (sub.checklist) return sub.checklist
+  const labels = BASE_CHECKLIST.slice(0, sub.checklistCount)
+  const open = OPEN_ITEM[sub.id]
+  if (open && !labels.includes(open.label)) labels[labels.length - 1] = open.label
+  return labels.map((label, i) => {
+    const id = `g${i}`
+    if (open && label === open.label && sub.status === 'waiting') return { id, label, state: 'missing', detail: open.detail }
+    if (sub.id === 'harbor' && label === 'Coverage limits match the application' && (sub.status === 'mismatch' || sub.status === 'waiting'))
+      return { id, label, state: 'missing', detail: 'Each occurrence: $1,000,000 on the certificate, $2,000,000 on the application' }
+    return { id, label, state: 'done', detail: label.includes('match') ? 'Checked against the application' : 'On file' }
+  })
 }

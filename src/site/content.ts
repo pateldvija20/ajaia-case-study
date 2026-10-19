@@ -113,7 +113,7 @@ export const JOURNEY = [
   },
   {
     stage: 'Follow up',
-    happens: 'A timer runs from the last contact. Past the threshold, the row asks for action.',
+    happens: 'A timer runs from the last contact on a threshold set per policy. When it passes, the row turns Overdue.',
     pain: 'Log: median 2.1 days to a reply; 9 waited over 4 days.',
     check: 'Chase, call or wait.',
   },

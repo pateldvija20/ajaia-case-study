@@ -1,8 +1,8 @@
-import { Check, Clock, FileQuestion, Archive, PhoneCall } from 'lucide-react'
-import type { Status } from '../types'
+import { Archive, Check, Clock, FileQuestion, PhoneCall } from 'lucide-react'
+import { STATUS_WORD, type DisplayStatus } from '../logic'
 import { Counter } from './ui'
 
-const STYLE: Record<Status | 'overdue', string> = {
+const STYLE: Record<DisplayStatus, string> = {
   mismatch: 'bg-danger-bg text-danger border-danger-line',
   missing: 'bg-info-bg text-info border-info-line',
   waiting: 'bg-warning-bg text-warning border-warning-line',
@@ -11,7 +11,7 @@ const STYLE: Record<Status | 'overdue', string> = {
   bound: 'bg-muted text-ink-2 border-line-strong',
 }
 
-/** Diamond: shape-coded "conflict" mark, distinct from the circle/clock icons. */
+/** Diamond: shape-coded "conflict" mark, distinct from the circle and clock icons. */
 function Diamond() {
   return (
     <svg aria-hidden width="11" height="11" viewBox="0 0 12 12">
@@ -22,37 +22,28 @@ function Diamond() {
   )
 }
 
-export function StatusBadge({ status, days = 0, overdue = false, compact = false }: { status: Status; days?: number; overdue?: boolean; compact?: boolean }) {
-  const key = status === 'waiting' && overdue ? 'overdue' : status
+const ICON: Record<DisplayStatus, () => React.ReactNode> = {
+  mismatch: () => <Diamond />,
+  missing: () => <FileQuestion aria-hidden size={12} strokeWidth={2.25} />,
+  waiting: () => <Clock aria-hidden size={12} strokeWidth={2.25} />,
+  overdue: () => <PhoneCall aria-hidden size={12} strokeWidth={2.25} />,
+  ready: () => <Check aria-hidden size={12} strokeWidth={2.75} />,
+  bound: () => <Archive aria-hidden size={12} strokeWidth={2.25} />,
+}
+
+/** One-word status. Waiting and Overdue also show how many days since the request. */
+export function StatusBadge({ status, days }: { status: DisplayStatus; days?: number }) {
+  const showDays = (status === 'waiting' || status === 'overdue') && days !== undefined
   return (
-    <span
-      className={`inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full border px-2 text-xs font-medium ${STYLE[key]}`}
-    >
-      {status === 'mismatch' && (
-        <>
-          <Diamond /> Mismatch
-        </>
-      )}
-      {status === 'missing' && (
-        <>
-          <FileQuestion aria-hidden size={12} strokeWidth={2.25} /> Missing document
-        </>
-      )}
-      {status === 'waiting' && (
-        <>
-          {overdue ? <PhoneCall aria-hidden size={12} strokeWidth={2.25} /> : <Clock aria-hidden size={12} strokeWidth={2.25} />}
-          {compact ? 'Waiting' : 'Waiting on broker'} · Day <Counter value={days} />
-        </>
-      )}
-      {status === 'ready' && (
-        <>
-          <Check aria-hidden size={12} strokeWidth={2.75} /> Ready to bind
-        </>
-      )}
-      {status === 'bound' && (
-        <>
-          <Archive aria-hidden size={12} strokeWidth={2.25} /> Bound
-        </>
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+      <span className={`inline-flex h-6 items-center gap-1.5 rounded-full border px-2 text-xs font-medium ${STYLE[status]}`}>
+        {ICON[status]()}
+        {STATUS_WORD[status]}
+      </span>
+      {showDays && (
+        <span className="text-xs tabular-nums text-ink-3">
+          Day <Counter value={days} />
+        </span>
       )}
     </span>
   )

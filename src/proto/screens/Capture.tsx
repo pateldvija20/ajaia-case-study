@@ -1,21 +1,25 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ArrowRight, FileText, Inbox, Loader2, Paperclip, PenSquare, Send as SendIcon, Star, Upload, X, Archive, ChevronLeft, ChevronRight, RotateCw } from 'lucide-react'
 import { useProto } from '../store'
-import { EVIDENCE, INBOX } from '../mockData'
+import { INBOX } from '../mockData'
 import { gsap, prefersReduced, useGSAP, withMotion } from '../motion'
 import { AiTag } from '../components/AiTag'
-import { Button, ProtoFooter, WhyDesign } from '../components/ui'
+import { Button, ProtoFooter } from '../components/ui'
+import { DocPreview, GenericPage } from './AppDetail'
 import type { CaptureDoc } from '../types'
 
 export function Capture() {
   const { capture, epoch } = useProto()
   const setPanel = useProto((s) => s.setPanel)
+  const setPreview = useProto((s) => s.setPreview)
   const notInPrototype = useProto((s) => s.notInPrototype)
+  /** which captured document each email's attachment is */
+  const ATTACH: Record<string, string> = { m1: 'd1', m2: 'd3', m3: 'd2', m5: 'd4' }
   const [selected, setSelected] = useState('m1')
   const mail = INBOX.find((m) => m.id === selected)!
 
   return (
-    <div className="relative flex h-[calc(100dvh-var(--bar-h))] min-h-[640px] flex-col overflow-hidden bg-[#e9e9e5]">
+    <div data-decision="capture" className="relative flex h-full min-h-[560px] flex-col overflow-hidden bg-[#e9e9e5]">
       {/* Generic browser chrome */}
       <div className="flex h-11 shrink-0 items-center gap-2 border-b border-line-strong bg-[#efefeb] px-3">
         <span aria-hidden className="flex gap-1.5">
@@ -94,8 +98,14 @@ export function Capture() {
           </p>
           <p className="mt-6 max-w-prose text-[15px] leading-7 text-ink-2">{mail.preview} Thanks, and let me know if you need anything else before binding.</p>
           {mail.attachments > 0 && (
-            <button onClick={notInPrototype} className="mt-6 inline-flex items-center gap-2 rounded-card border border-line px-3 py-2 text-sm hover:bg-canvas">
-              <FileText aria-hidden size={16} className="text-danger" /> Attachment
+            <button
+              onClick={() => {
+                setPanel(true)
+                if (ATTACH[mail.id]) setPreview(ATTACH[mail.id])
+              }}
+              className="mt-6 inline-flex items-center gap-2 rounded-card border border-line px-3 py-2 text-sm hover:bg-canvas"
+            >
+              <FileText aria-hidden size={16} className="text-danger" /> {ATTACH[mail.id] ? capture.docs.find((d) => d.id === ATTACH[mail.id])?.file : 'Attachment'}
             </button>
           )}
         </article>
@@ -107,8 +117,15 @@ export function Capture() {
 }
 
 function CapturePanel({ onClose }: { onClose: () => void }) {
-  const { capture, subs, scrollTarget } = useProto()
+  const { capture, subs, scrollTarget, decisions } = useProto()
   const confirmMatch = useProto((s) => s.confirmMatch)
+  const setPreview = useProto((s) => s.setPreview)
+  const previewDoc = capture.docs.find((d) => d.id === capture.previewId)
+  const previewRef = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    if (previewDoc && previewRef.current && !prefersReduced())
+      gsap.fromTo(previewRef.current, { opacity: 0, x: 16 }, { opacity: 1, x: 0, duration: 0.3, ease: 'back.out(1.1)' })
+  }, [previewDoc])
   const go = useProto((s) => s.go)
   const panel = useRef<HTMLElement>(null)
   const scrim = useRef<HTMLDivElement>(null)
@@ -154,7 +171,25 @@ function CapturePanel({ onClose }: { onClose: () => void }) {
 
   return (
     <>
-      <div ref={scrim} aria-hidden className="absolute inset-x-0 bottom-0 top-11 bg-[rgb(25_25_24/0.42)]" onClick={onClose} />
+      <div ref={scrim} aria-hidden className="absolute inset-x-0 bottom-0 top-11 bg-[rgb(25_25_24/0.42)]" onClick={() => (previewDoc ? setPreview(null) : onClose())} />
+      {previewDoc && (
+        <div className="pointer-events-none absolute bottom-0 left-0 right-[440px] top-11 hidden items-start justify-center overflow-auto p-6 md:flex">
+          <div ref={previewRef} className="pointer-events-auto relative w-full max-w-[520px]" role="region" aria-label={`Preview of ${previewDoc.file}`}>
+            <button onClick={() => setPreview(null)} aria-label="Close preview" className="absolute right-3 top-3 z-10 grid h-8 w-8 place-items-center rounded-full bg-muted text-ink hover:bg-sunken">
+              <X aria-hidden size={15} />
+            </button>
+            {previewDoc.previewOf ? (
+              <DocPreview
+                doc={{ id: previewDoc.id, name: previewDoc.file, type: previewDoc.type, source: previewDoc.source, received: 'today', preview: previewDoc.previewOf.doc }}
+                sub={subs.find((x) => x.id === previewDoc.previewOf!.sub)!}
+                decisions={decisions}
+              />
+            ) : (
+              <GenericPage title={previewDoc.type} name={previewDoc.file} meta={`${previewDoc.source} · ${previewDoc.from}`} />
+            )}
+          </div>
+        </div>
+      )}
       <aside
         ref={panel}
         aria-label="Bind Desk capture panel"
@@ -171,7 +206,8 @@ function CapturePanel({ onClose }: { onClose: () => void }) {
         </header>
 
         <div className="min-h-0 flex-1 overflow-auto px-5 py-4">
-          <div className="mb-3 space-y-1.5">
+          <p className="mb-3 text-xs text-ink-3">Click a document to preview it.</p>
+          <div data-decision="ai-tag" className="mb-3 space-y-1.5">
             <AiTag
               variant="Integration"
               did="Reads attachments and portal files on this page"
@@ -189,7 +225,7 @@ function CapturePanel({ onClose }: { onClose: () => void }) {
               why={{
                 evidence: docs.map((d) => `${d.file} → ${d.type}`),
                 confidence: docs.map((d) => `${Math.round(d.confidence * 100)}%`).join(' · '),
-                approval: 'Matches under 80% confidence wait for you to confirm or reassign.',
+                approval: 'Matches under 80% confidence wait for you to confirm or change the application.',
                 audit: docs.map((d) => `${d.file}: ${d.state}`),
               }}
             />
@@ -197,7 +233,7 @@ function CapturePanel({ onClose }: { onClose: () => void }) {
 
           <ul className="space-y-2">
             {docs.map((d, i) => (
-              <DocRow key={d.id} doc={d} resolved={i < resolved} subs={subs} onConfirm={() => confirmMatch(d.id)} />
+              <DocRow key={d.id} doc={d} resolved={i < resolved} subs={subs} onConfirm={() => confirmMatch(d.id)} previewing={capture.previewId === d.id} onPreview={() => setPreview(capture.previewId === d.id ? null : d.id)} />
             ))}
           </ul>
 
@@ -205,19 +241,13 @@ function CapturePanel({ onClose }: { onClose: () => void }) {
             <UploadFallback />
           </div>
 
-          <div data-panel-rest className="mt-4">
-            <WhyDesign evidence={[EVIDENCE.hunting]}>
-              Documents are found where they already arrive, not re-uploaded. Faxes never reach a web inbox, so the upload fallback sits right here. Unsure
-              matches stop and ask.
-            </WhyDesign>
-          </div>
         </div>
 
         <div data-panel-rest className="border-t border-line">
           <div className="flex items-center justify-between gap-3 px-5 py-3">
             <p className="text-xs text-ink-3">{uncertainOpen ? '1 match needs your review' : 'All matches confirmed'}</p>
-            <Button variant="primary" size="md" onClick={() => go({ name: 'dashboard', tab: 'week' })}>
-              Open dashboard <ArrowRight aria-hidden size={14} />
+            <Button variant="primary" size="md" onClick={() => go({ name: 'home' })}>
+              Open Home <ArrowRight aria-hidden size={14} />
             </Button>
           </div>
           <ProtoFooter />
@@ -227,7 +257,21 @@ function CapturePanel({ onClose }: { onClose: () => void }) {
   )
 }
 
-function DocRow({ doc, resolved, subs, onConfirm }: { doc: CaptureDoc; resolved: boolean; subs: { id: string; client: string; status: string }[]; onConfirm: () => void }) {
+function DocRow({
+  doc,
+  resolved,
+  subs,
+  onConfirm,
+  previewing,
+  onPreview,
+}: {
+  doc: CaptureDoc
+  resolved: boolean
+  subs: { id: string; client: string; status: string }[]
+  onConfirm: () => void
+  previewing: boolean
+  onPreview: () => void
+}) {
   const reassign = useProto((s) => s.reassign)
   const [picking, setPicking] = useState(false)
   const [choice, setChoice] = useState(doc.matchId)
@@ -264,16 +308,19 @@ function DocRow({ doc, resolved, subs, onConfirm }: { doc: CaptureDoc; resolved:
   return (
     <li
       data-doc-row={doc.id}
-      className={`relative rounded-card border p-3 ${uncertain && shown ? 'border-warning-line bg-[#fffaf2]' : 'border-line bg-surface'}`}
+      data-decision={uncertain ? 'low-confidence' : undefined}
+      className={`relative rounded-card border p-3 transition-colors ${previewing ? 'border-ink ring-1 ring-ink' : uncertain && shown ? 'border-warning-line' : 'border-line hover:border-line-strong'} ${uncertain && shown ? 'bg-[#fffaf2]' : 'bg-surface'}`}
     >
       <span ref={ring} aria-hidden className="pointer-events-none absolute -inset-[3px] rounded-[12px] border-2 border-warning opacity-0" />
       <div className="flex items-start gap-3">
         <FileText aria-hidden size={18} className="mt-0.5 shrink-0 text-ink-3" />
         <div className="min-w-0 flex-1">
-          <p className="truncate font-mono text-[13px] text-ink">{doc.file}</p>
-          <p className="text-xs text-ink-3">
-            <span className="font-medium text-ink-2">{doc.type}</span> · {doc.source} · {doc.from}
-          </p>
+          <button onClick={onPreview} aria-pressed={previewing} className="block w-full text-left" title="Preview this document">
+            <span className="block truncate font-mono text-[13px] text-ink underline decoration-transparent underline-offset-2 hover:decoration-ink-3">{doc.file}</span>
+            <span className="block text-xs text-ink-3">
+              <span className="font-medium text-ink-2">{doc.type}</span> · {doc.source} · {doc.from}
+            </span>
+          </button>
           <div className="mt-2" aria-live="polite">
             {!shown ? (
               <span key="matching" ref={matchChip} className="inline-flex h-6 items-center gap-1.5 rounded-full bg-muted px-2 text-xs text-ink-3">
@@ -299,36 +346,33 @@ function DocRow({ doc, resolved, subs, onConfirm }: { doc: CaptureDoc; resolved:
               </span>
             )}
           </div>
-          {shown && uncertain && !picking && (
-            <div className="mt-2.5">
-              <p className="text-xs text-ink-2">
-                "HL" could be Harborview Freight Co. or Harbor Line Logistics. Which submission is this for?
-              </p>
-              <div className="mt-2 flex gap-2">
-                <Button variant="primary" onClick={onConfirm}>
-                  Confirm {match?.client}
-                </Button>
-                <Button variant="secondary" onClick={() => setPicking(true)}>
-                  Reassign…
-                </Button>
-              </div>
-            </div>
+          {shown && !picking && !uncertain && (
+            <button onClick={() => setPicking(true)} className="mt-1.5 text-xs text-ink-3 underline underline-offset-2 hover:text-ink">
+              Change application
+            </button>
           )}
-          {picking && (
-            <fieldset className="mt-2.5">
-              <legend className="text-xs font-medium text-ink-2">Assign to</legend>
-              <div className="mt-1 space-y-1">
-                {subs
-                  .filter((s) => s.status !== 'bound')
-                  .map((s) => (
-                    <label key={s.id} className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-sm hover:bg-muted">
-                      <input type="radio" name={`assign-${doc.id}`} checked={choice === s.id} onChange={() => setChoice(s.id)} className="accent-[#1c1c1b]" />
-                      {s.client}
-                      {doc.candidates?.includes(s.id) && <span className="text-xs text-ink-3">suggested</span>}
-                    </label>
-                  ))}
-              </div>
-              <div className="mt-2 flex gap-2">
+          {shown && (uncertain || picking) && (
+            <div className="mt-2.5">
+              {uncertain && <p className="text-xs text-ink-2">Only {Math.round(doc.confidence * 100)}% sure. "HL" could be Harborview Freight Co. or Harbor Line Logistics.</p>}
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <label className="sr-only" htmlFor={`app-${doc.id}`}>
+                  Application for {doc.file}
+                </label>
+                <select
+                  id={`app-${doc.id}`}
+                  value={choice}
+                  onChange={(e) => setChoice(e.target.value)}
+                  className="h-8 min-w-0 flex-1 rounded-full border border-line-strong bg-surface pl-3 pr-7 text-sm hover:border-ink-3"
+                >
+                  {subs
+                    .filter((s) => s.status !== 'bound')
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.client}
+                        {doc.candidates?.includes(s.id) ? ' (suggested)' : ''}
+                      </option>
+                    ))}
+                </select>
                 <Button
                   variant="primary"
                   onClick={() => {
@@ -337,13 +381,15 @@ function DocRow({ doc, resolved, subs, onConfirm }: { doc: CaptureDoc; resolved:
                     setPicking(false)
                   }}
                 >
-                  Assign
+                  Confirm
                 </Button>
-                <Button variant="ghost" onClick={() => setPicking(false)}>
-                  Cancel
-                </Button>
+                {picking && !uncertain && (
+                  <Button variant="ghost" onClick={() => setPicking(false)}>
+                    Cancel
+                  </Button>
+                )}
               </div>
-            </fieldset>
+            </div>
           )}
         </div>
       </div>
@@ -377,7 +423,7 @@ function UploadFallback() {
         <Button variant="secondary" onClick={addFax} disabled={capture.faxAdded}>
           {capture.faxAdded ? 'Scan added' : 'Upload a scan'}
         </Button>
-        <span className="text-xs text-ink-3">{capture.faxAdded ? 'FAX_0414_0932.pdf · read and matched' : 'Demo uses a sample fax page'}</span>
+        <span className="text-xs text-ink-3">{capture.faxAdded ? 'FAX_0414_0932.pdf · read and matched' : 'Uses a sample fax page'}</span>
       </div>
     </div>
   )

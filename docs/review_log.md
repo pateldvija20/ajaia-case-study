@@ -32,3 +32,22 @@ Also fixed: two journey and tour lines claimed things the research does not supp
 Checked in the motion strips: the capture chip morphs (old text out, chip reshapes with `back.out(1.1)`, new text in about 80 ms later). The tab underline stretches toward Past and settles. Row moves use Flip on grid rows. The bind dialog scales from 0.96 with a backdrop fade. Copy scan found no banned words, binary contrasts or em dashes in prose.
 
 Known, not fixed yet: the Past table is tight at 390 px; the follow-up threshold makes every waiting row overdue by day 2 in scenario D.
+
+## Round 3 (prototype restructure)
+
+Changes from the author's sketch: prototype window with a left panel (date and Advance 1 day, hover-driven design decision, guided tour, Desktop / Mobile glance switch, Reset) and the app inside a laptop or phone frame. Home groups open work by one-word status. Applications has a date-range summary and Open, In review and Closed tabs. Application detail has section tabs (Status, Checklist, Docs, Follow-up, Bind), a status bar and a per-policy follow-up threshold. Capture previews documents and has a 40% match with an application picker.
+
+| Criterion | Score |
+|---|---|
+| First-glance clarity | 8 |
+| Readability at 390 px | 8 |
+| Motion quality | 8 |
+| Consistency with references | 8 |
+| Copy quality | 8 |
+
+Three worst problems found and fixed:
+1. The bind dialog covered the whole window, including the tour's Finish button in the left panel. It now opens inside the laptop frame only.
+2. In the three-column compare, label and value shared one line, so long values wrapped mid-highlight. Labels now sit above values.
+3. The capture preview's close button overlapped the webmail behind it, and policy numbers wrapped mid-number on Home. The close button moved onto the card; policy numbers no longer wrap.
+
+Also fixed: Harborview's follow-up threshold is 3 days, so in scenario D only the right rows turn Overdue.

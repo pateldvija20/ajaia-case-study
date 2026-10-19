@@ -14,7 +14,7 @@ export function BindDialog({ sub, checks }: { sub: Submission; checks: string[] 
   const [ack, setAck] = useState(false)
   const scrim = useRef<HTMLDivElement>(null)
   const done = state === 'done'
-  const close = () => (done ? go({ name: 'dashboard', tab: 'week' }) : openBind(false))
+  const close = () => (done ? go({ name: 'home' }) : openBind(false))
   const trap = useFocusTrap(true, close)
 
   useGSAP(
@@ -38,7 +38,7 @@ export function BindDialog({ sub, checks }: { sub: Submission; checks: string[] 
   )
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center p-4">
+    <div className="absolute inset-0 z-50 grid place-items-center p-4">
       <div ref={scrim} className="absolute inset-0 bg-[rgb(25_25_24/0.42)]" onClick={close} aria-hidden />
       <div
         ref={trap}
@@ -92,7 +92,7 @@ export function BindDialog({ sub, checks }: { sub: Submission; checks: string[] 
             </p>
             <p data-done className="mt-1 text-xs text-ink-3">Approved by you on {sub.boundOn}. Logged to the audit trail.</p>
             <Button data-done data-autofocus variant="primary" size="md" className="mt-5" onClick={close}>
-              Back to dashboard
+              Back to Home
             </Button>
           </div>
         )}

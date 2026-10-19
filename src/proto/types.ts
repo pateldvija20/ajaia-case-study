@@ -40,6 +40,16 @@ export interface ChecklistItem {
   suggestion?: { value: string; from: string }
 }
 
+export interface DocRef {
+  id: string
+  name: string
+  type: string
+  source: string
+  received: string
+  /** key into application / counterDoc for a rich preview */
+  preview?: 'application' | 'counter'
+}
+
 export interface Submission {
   id: string
   client: string
@@ -61,6 +71,12 @@ export interface Submission {
   askedFor?: string
   boundOn?: string
   checklistCount: number
+  /** demo day the submission arrived (0 = Tue 14 Apr) */
+  receivedDay: number
+  boundDay?: number
+  /** follow-up threshold in days, set per policy by the underwriting assistant */
+  followUpDays: number
+  documents: DocRef[]
   application: SourceDoc
   counterDoc?: SourceDoc
   diffs?: Diff[]
@@ -78,11 +94,16 @@ export interface CaptureDoc {
   matchId: string
   confidence: number
   candidates?: string[]
+  /** submission whose documents give the rich preview */
+  previewOf?: { sub: string; doc: 'application' | 'counter' }
   state: 'matched' | 'uncertain' | 'confirmed' | 'reassigned'
 }
 
+export type AppSection = 'status' | 'checklist' | 'docs' | 'followup' | 'bind'
+export type AppsTab = 'open' | 'review' | 'closed'
+
 export type Screen =
   | { name: 'capture' }
-  | { name: 'dashboard'; tab: 'week' | 'past' }
-  | { name: 'review'; id: string }
-  | { name: 'mobile' }
+  | { name: 'home' }
+  | { name: 'applications'; tab: AppsTab }
+  | { name: 'app'; id: string; section?: AppSection }

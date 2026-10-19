@@ -5,7 +5,7 @@ import { ArrowUpRight, Check, CircleDashed, Clock, Phone } from 'lucide-react'
 import { gsap, useGSAP, withMotion } from '../proto/motion'
 import { AiTag } from '../proto/components/AiTag'
 import { AJAIA_SOURCES, AJAIA_URL, HYPOTHESES, JOURNEY, NEEDS, PORTFOLIO_URL, PROTOTYPE_URL, QUESTIONS, WISHLIST, YOUTUBE_URL } from './content'
-import imgCapture from './img/1a.jpg'
+import imgCapture from './img/1b.jpg'
 import imgDashboard from './img/2a.jpg'
 import imgReview from './img/3a.jpg'
 import imgChecklist from './img/3b.jpg'
@@ -205,30 +205,30 @@ export default function Home() {
               n={1}
               title="Capture panel"
               img={imgCapture}
-              alt="A browser extension panel over a webmail inbox, listing four detected documents with the submission each one matched, and one uncertain match asking to confirm or reassign."
-              body="A browser side panel reads attachments in web inboxes and broker portals, names each document type and matches it to a submission. Faxes never reach an inbox, so a scan upload sits in the same panel."
+              alt="A browser extension panel over a webmail inbox listing detected documents and the application each one matched. One match is only 40% confident and offers an application picker; its document is previewed beside the panel."
+              body="A browser side panel reads attachments in web inboxes and broker portals, names each document type and matches it to an application. Click a document to preview it. Faxes never reach an inbox, so a scan upload sits in the same panel."
               evidence="Colin: 11 min to locate documents vs 3 min for the checklist. 17 of 54 arrived outside the client portal."
-              checkpoint="Matches under 80% confidence wait for you to confirm or reassign."
+              checkpoint="Matches under 80% confidence wait for you to confirm or pick the right application."
               scenario="C"
             />
             <Screen
               n={2}
-              title="Dashboard"
+              title="Home and Applications"
               img={imgDashboard}
-              alt="The week view: submissions ordered by urgency with status badges for Mismatch, Missing document, Waiting on broker with a day count, and Ready to bind."
-              extra={{ img: imgFollow, alt: 'The same dashboard two days later: waiting rows past the follow-up threshold show Follow up and Call buttons.' }}
-              body="This week as a worklist. Rows sort by what blocks binding, each with one reason. Older items stay until they are bound; bound policies move to Past. Once a broker passes the follow-up threshold (2 days by default, or 1), the row offers Follow up and Call."
+              alt="Home: open applications grouped by status (Mismatch, Missing, Overdue, Waiting, Ready), each row with a next step written as a sentence and an inline link."
+              extra={{ img: imgFollow, alt: 'Home two days later: Harbor Line has passed its follow-up date and moved into the Overdue group, with Follow up and call links.' }}
+              body="Home groups open work by one-word status: Mismatch, Missing, Overdue, Waiting, Ready. Within a group the oldest comes first. Each row says the next step in a sentence with a link. The follow-up threshold is set per policy, and a row turns Overdue when it passes. Applications holds everything else: a date-range summary and Open, In review and Closed tabs."
               evidence="Anika: 14 min to the first flag. Median 2.1 days to a broker reply, nine over 4 days."
               checkpoint="You choose to chase, call or wait. Nothing follows up on its own."
               scenario="D"
             />
             <Screen
               n={3}
-              title="Side-by-side review"
+              title="Application"
               img={imgReview}
-              alt="Application on the left and certificate of insurance on the right, two differences highlighted and connected by lines, with Real mismatch and Acceptable controls."
+              alt="Application detail: the section panel collapsed to icons, the application and certificate of insurance in two columns with differences highlighted and connected, and a third column listing each difference with Real mismatch and Acceptable controls."
               extra={{ img: imgChecklist, alt: 'Missing-document review: the checklist with loss runs marked missing and two suggested values to accept or dismiss.' }}
-              body="The application on the left, the conflicting document on the right, differences highlighted and connected. You mark each one; only real mismatches go into the drafted broker email. When a document is missing, the right side becomes the checklist with the gap marked and optional suggested values."
+              body="Each application has five sections, Status, Checklist, Docs, Follow-up and Bind, with a status bar that jumps to each. On a mismatch the side panel collapses so the application, the certificate and the list of differences fit in three columns; clicking a highlight brings its difference to the top. Only differences you mark real go into the drafted broker email. A missing document shows as a gap in the checklist with optional suggested values."
               evidence='Colin: "I just read carefully." Mismatches on 23 of 61 and 19 of 54 submissions.'
               checkpoint="You mark each highlight Real mismatch or Acceptable, then review and edit the email before it leaves the company."
               scenario="A"
