@@ -3,6 +3,9 @@ import {
   ArrowLeft,
   Check,
   ChevronDown,
+  ClipboardList,
+  FileSearch,
+  Stamp,
   CircleDashed,
   FileText,
   Hourglass,
@@ -26,14 +29,24 @@ import { InlineLink } from './Home'
 import type { Decision, DocRef, SourceDoc, Submission } from '../types'
 
 type Step = 'checklist' | 'docs' | 'followup' | 'bind'
-const STEPS: { id: Step; title: string }[] = [
-  { id: 'checklist', title: 'Checklist' },
-  { id: 'docs', title: 'Document mismatch' },
-  { id: 'followup', title: 'Follow-up' },
-  { id: 'bind', title: 'Final review and bind' },
+const STEPS: { id: Step; title: string; icon: typeof Info }[] = [
+  { id: 'checklist', title: 'Checklist', icon: ClipboardList },
+  { id: 'docs', title: 'Document mismatch', icon: FileSearch },
+  { id: 'followup', title: 'Follow-up', icon: Mail },
+  { id: 'bind', title: 'Final review and bind', icon: Stamp },
 ]
 
+const STEP_ICON: Record<StepTone, string> = {
+  mismatch: 'bg-danger text-white',
+  missing: 'bg-info text-white',
+  overdue: 'bg-warning text-white',
+  waiting: 'border-2 border-warning-line bg-warning-bg text-warning',
+}
+
+type StepTone = 'mismatch' | 'missing' | 'waiting' | 'overdue'
+
 interface StepState {
+  tone?: StepTone
   done: boolean
   action: boolean
   count?: string
@@ -62,6 +75,7 @@ function useSteps(sub: Submission): Record<Step, StepState> {
   const asked = sub.askedFor?.split(' (')[0]
 
   const checklist: StepState = {
+    tone: doneItems === list.length ? undefined : missing ? (diffs.length && sub.status !== 'missing' ? 'mismatch' : 'missing') : undefined,
     done: doneItems === list.length,
     action: pendingSuggestions > 0 || (sub.status === 'missing' && !!missing),
     count: `${doneItems} of ${list.length}`,
@@ -85,6 +99,7 @@ function useSteps(sub: Submission): Record<Step, StepState> {
   const docs: StepState = !diffs.length
     ? { done: true, action: false, count: 'none', line: 'No differences between the documents.' }
     : {
+        tone: sub.status === 'mismatch' && decided < diffs.length ? 'mismatch' : undefined,
         done: decided === diffs.length,
         action: sub.status === 'mismatch' && decided < diffs.length,
         count: `${decided} of ${diffs.length}`,
@@ -110,6 +125,7 @@ function useSteps(sub: Submission): Record<Step, StepState> {
   const followup: StepState =
     st === 'overdue'
       ? {
+          tone: 'overdue',
           done: false,
           action: true,
           count: `day ${daysWaiting(sub, day)}`,
@@ -137,6 +153,7 @@ function useSteps(sub: Submission): Record<Step, StepState> {
         }
       : st === 'waiting'
         ? {
+            tone: 'waiting',
             done: false,
             action: false,
             count: `day ${daysWaiting(sub, day)}`,
@@ -293,11 +310,11 @@ function Stepper({ sub, steps, open, onToggle }: { sub: Submission; steps: Recor
             {!last && <span aria-hidden className={`absolute bottom-0 left-[15px] top-9 w-0.5 rounded-full ${st.done ? 'bg-success' : 'bg-line-strong'}`} />}
             <span
               aria-hidden
-              className={`absolute left-0 top-1 grid h-8 w-8 place-items-center rounded-full text-sm font-semibold ${
-                st.done ? 'bg-success text-white' : st.action ? 'bg-ink text-white' : 'border-2 border-line-strong bg-canvas text-ink-3'
+              className={`absolute left-0 top-1 grid h-8 w-8 place-items-center rounded-full ${
+                st.done ? 'bg-success text-white' : st.tone ? STEP_ICON[st.tone] : 'border-2 border-line-strong bg-canvas text-ink-3'
               }`}
             >
-              {st.done ? <Check size={16} strokeWidth={3} /> : i + 1}
+              {st.done ? <Check size={16} strokeWidth={3} /> : <s.icon size={15} strokeWidth={2.25} />}
             </span>
             <div className={`rounded-panel border bg-surface shadow-card ${st.action && !st.done ? 'border-line-strong' : 'border-line'}`}>
               <button
@@ -310,7 +327,7 @@ function Stepper({ sub, steps, open, onToggle }: { sub: Submission; steps: Recor
                   <span className="flex flex-wrap items-baseline gap-x-2">
                     <span className="text-[15px] font-semibold">{s.title}</span>
                     {st.count && <span className="text-sm tabular-nums text-ink-3">({st.count})</span>}
-                    <span className="sr-only">{st.done ? 'done' : st.action ? 'needs action' : ''}</span>
+                    <span className="sr-only">{st.done ? 'done' : st.tone ? st.tone : st.action ? 'needs action' : ''}</span>
                   </span>
                 </span>
                 {st.progress !== undefined && (
