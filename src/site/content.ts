@@ -24,10 +24,11 @@ export const EXPECTATIONS: [string, string, string][] = [
   ['“Don’t touch the checklist”', 'Unchanged', 'Supported: 3 min'],
 ]
 
-export const SHIPS_FIRST: [string, string][] = [
-  ['Mismatch detection.', 'It’s the most frequent problem and needs no new document sources.'],
-  ['Document capture.', 'It’s the biggest time cost. The next round decides its scope.'],
-  ['Follow-ups.', 'Defaults depend on how assistants chase brokers today.'],
+/** How AI was used, grouped by area. The decisions in each are the author's; AI helped carry them out. */
+export const AI_USE: [string, string][] = [
+  ['Research.', 'I analyzed the logs, read the interviews for needs and mapped the journey. AI helped sort the evidence.'],
+  ['Product.', 'I defined the app flow and where each human checkpoint sits. AI helped build and test the prototype.'],
+  ['Design.', 'I set the layout and the brand, and tried several directions. AI helped turn them into code.'],
 ]
 
 export interface Scenario {

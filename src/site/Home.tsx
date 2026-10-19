@@ -14,7 +14,7 @@ import {
   PROTOTYPE_URL,
   QUESTIONS,
   SCENARIOS,
-  SHIPS_FIRST,
+  AI_USE,
   YOUTUBE_URL,
   type Scenario,
 } from './content'
@@ -126,33 +126,33 @@ export default function Home() {
         </section>
 
         {/* Walkthrough */}
-        <Section id="walkthrough" label="Walkthrough" title="The five-minute version">
+        <Section id="walkthrough" label="Walkthrough" title="The five-minute version" center>
           <VideoBlock />
         </Section>
 
         {/* Task 1 */}
         <Section id="problem" label="Task 1 · Identify the problem" title="A fast checklist inside a slow week" lede="Find where the time goes before designing anything.">
-          <div className="space-y-16">
-            <Sub title="Context">
-              <p className="max-w-2xl text-md text-ink-2">
+          <div className="space-y-24 md:space-y-32">
+            <Callout title="Context">
+              <p className="text-md text-ink-2">
                 Marsh &amp; Colby is a 40-person commercial insurance brokerage. Assistants can&rsquo;t bind a policy until every document is in and every
                 coverage limit matches.
               </p>
-              <p className="mt-3 text-sm text-ink-3">
+              <p className="mt-4 text-sm text-ink-3">
                 <span className="font-medium text-ink-2">Sources:</span> Two interviews (Anika Shah, Colin Doyle) and 30 days of Bindwise logs.
               </p>
-            </Sub>
+            </Callout>
 
             <Sub title="Today’s journey" id="journey">
               <Journey />
             </Sub>
 
-            <Sub title="The problem">
-              <p className="max-w-2xl text-md text-ink-2">
+            <Callout title="The problem">
+              <p className="text-md text-ink-2">
                 <strong className="font-semibold text-ink">The checklist is the fastest step.</strong> Finding documents and spotting mismatches take longer, and
                 broker replies take days. About one in three submissions has a mismatch.
               </p>
-            </Sub>
+            </Callout>
 
             <div className="grid gap-10 md:grid-cols-2">
               <div data-reveal>
@@ -175,24 +175,22 @@ export default function Home() {
 
             <div>
               <p className="text-xs font-medium uppercase tracking-[0.08em] text-ink-3">Pushback</p>
-              <h3 data-reveal className="mt-2 max-w-3xl font-display text-[26px] leading-9 md:text-[32px] md:leading-10">
-                &ldquo;Our users asked for the wishlist. Why are you showing me something else?&rdquo;
-              </h3>
-              <div className="mt-6 grid gap-10 md:grid-cols-[1.3fr_1fr]">
-                <p data-reveal className="text-md leading-7 text-ink-2">
-                  <strong className="font-semibold text-ink">The checklist is 3 minutes of the work.</strong> The rest of the week goes to the steps around it.
-                  Every wishlist item still has a place, sized to its evidence.
-                </p>
+              <div className="mt-2 grid gap-10 md:grid-cols-[1.3fr_1fr] md:gap-12">
+                <div data-reveal>
+                  <h3 className="font-display text-[26px] leading-9 md:text-[32px] md:leading-10">
+                    &ldquo;Our users asked for the wishlist. Why are you showing me something else?&rdquo;
+                  </h3>
+                  <p className="mt-6 text-md leading-7 text-ink-2">
+                    <strong className="font-semibold text-ink">The checklist is 3 minutes of the work.</strong> The rest of the week goes to the steps around it.
+                    Every wishlist item still has a place, sized to its evidence.
+                  </p>
+                </div>
                 <aside data-reveal className="self-start rounded-panel border border-line bg-surface p-5">
                   <p className="text-xs font-medium uppercase tracking-[0.08em] text-ink-3">Where the minutes go, per submission</p>
                   <MinutesChart compact />
                 </aside>
               </div>
             </div>
-
-            <Sub title="What ships first">
-              <PhaseCards items={SHIPS_FIRST} label="Phase" />
-            </Sub>
           </div>
         </Section>
 
@@ -298,15 +296,10 @@ export default function Home() {
         {/* Clarifications */}
         <Section id="ai" label="Clarifications" title="How I used AI">
           <p data-reveal className="max-w-2xl text-md text-ink-2">
-            <strong className="font-semibold text-ink">I made the design decisions.</strong> AI helped with:
+            <strong className="font-semibold text-ink">I made the design decisions.</strong> AI helped me carry them out.
           </p>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {['Research', 'Exploration', 'Prototyping', 'One thing I rejected'].map((slot) => (
-              <div key={slot} data-reveal className="rounded-panel border border-dashed border-line-strong bg-canvas p-5">
-                <h3 className="text-md font-semibold">{slot}</h3>
-                <p className="mt-2 text-sm text-ink-3">[your example]</p>
-              </div>
-            ))}
+          <div className="mt-8">
+            <PhaseCards items={AI_USE} label="Area" />
           </div>
         </Section>
 
@@ -348,25 +341,34 @@ export default function Home() {
 const OUTLINE_BTN =
   'inline-flex h-10 items-center gap-1 rounded-full border border-line-strong bg-transparent px-4 font-medium transition-colors hover:border-ink-3 hover:bg-muted'
 
-function Section({ id, label, title, lede, children }: { id: string; label: string; title: string; lede?: string; children: ReactNode }) {
+function Section({ id, label, title, lede, center = false, children }: { id: string; label: string; title: string; lede?: string; center?: boolean; children: ReactNode }) {
   return (
     <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-16 border-t border-line">
       <div className="mx-auto max-w-[1120px] px-4 py-16 md:px-8 md:py-24">
-        <p className="text-xs font-medium uppercase tracking-[0.08em] text-ink-3">{label}</p>
-        <h2 id={`${id}-title`} data-reveal className="mt-2 max-w-3xl font-display text-[30px] leading-9 tracking-[-0.01em] md:text-[40px] md:leading-[46px]">
+        <p className={`text-xs font-medium uppercase tracking-[0.08em] text-ink-3 ${center ? 'text-center' : ''}`}>{label}</p>
+        <h2 id={`${id}-title`} data-reveal className={`mt-2 max-w-3xl ${center ? 'mx-auto text-center' : ''} font-display text-[30px] leading-9 tracking-[-0.01em] md:text-[40px] md:leading-[46px]`}>
           {title}
         </h2>
         {lede && <p className="mt-3 max-w-2xl text-md text-ink-2">{lede}</p>}
-        <div className="mt-8 md:mt-10">{children}</div>
+        <div className="mt-10 md:mt-16">{children}</div>
       </div>
     </section>
+  )
+}
+
+function Callout({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div data-reveal className="rounded-panel bg-muted px-6 py-10 text-center md:px-12 md:py-14">
+      <h3 className="font-display text-[24px] leading-8 md:text-[28px] md:leading-9">{title}</h3>
+      <div className="mx-auto mt-4 max-w-2xl">{children}</div>
+    </div>
   )
 }
 
 function Sub({ title, id, children }: { title: string; id?: string; children: ReactNode }) {
   return (
     <div id={id}>
-      <h3 data-reveal className="mb-4 font-display text-[24px] leading-8 md:text-[26px]">
+      <h3 data-reveal className="mb-6 font-display text-[24px] leading-8 md:text-[26px]">
         {title}
       </h3>
       {children}
