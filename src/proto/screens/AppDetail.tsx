@@ -918,6 +918,42 @@ function ContactChooser({ sub }: { sub: Submission }) {
   )
 }
 
+/** What already went to the broker, with the agent tag now confirmed. */
+function SentRecord({ sub, text }: { sub: Submission; text: string }) {
+  const [open, setOpen] = useState(false)
+  const subject = text.split('\n').find((l) => l.startsWith('Subject: '))?.replace('Subject: ', '')
+  const isMismatch = sub.askedFor?.startsWith('confirmation')
+  return (
+    <div className="rounded-card border border-line bg-surface">
+      <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-3">
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 text-sm font-semibold">
+            <Mail aria-hidden size={14} /> Email sent {fmtDay(sub.waitingSince ?? 0)}
+          </p>
+          <p className="mt-0.5 truncate text-sm text-ink-2">{subject}</p>
+        </div>
+        <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="inline-flex items-center gap-1 text-sm font-medium underline decoration-line-strong underline-offset-[3px] hover:decoration-ink">
+          {open ? 'Hide email' : 'Show email'}
+          <ChevronDown aria-hidden size={14} className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+        </button>
+      </div>
+      {open && <pre className="mx-4 mb-3 whitespace-pre-wrap rounded-card bg-canvas p-3 font-sans text-sm leading-6 text-ink-2">{text}</pre>}
+      <div data-decision="ai-tag" className="border-t border-line px-4 py-2.5">
+        <AiTag
+          variant="Agent"
+          did={isMismatch ? 'Drafted the broker email from your decisions' : 'Drafted the request for the missing document'}
+          review="Confirmed by you"
+          why={{
+            evidence: [`Asked for: ${sub.askedFor}`],
+            approval: 'You reviewed the draft and pressed Send.',
+            audit: ['Draft generated', `Sent by you ${fmtDay(sub.waitingSince ?? 0)}`],
+          }}
+        />
+      </div>
+    </div>
+  )
+}
+
 function CallPanel({ sub, onLog }: { sub: Submission; onLog: () => void }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-4 rounded-panel border border-line bg-surface px-5 py-4">
@@ -1042,6 +1078,7 @@ function FollowUpSection({ sub }: { sub: Submission }) {
               <span className="font-semibold text-ink">You asked for</span> {sub.askedFor}.
             </p>
           )}
+          {drafts[sub.id] && <SentRecord sub={sub} text={drafts[sub.id]} />}
         </>
       )}
 

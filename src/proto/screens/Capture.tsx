@@ -175,18 +175,9 @@ function CapturePanel({ onClose }: { onClose: () => void }) {
             <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3">Bind Desk · Capture</p>
             <h2 className="mt-0.5 font-display text-[22px] leading-7">{docs.length} documents found in this inbox</h2>
             <p className="mt-1 text-sm text-ink-2">Check each match. Click a document to preview it or change its application.</p>
-            <div data-decision="ai-tag" className="mt-3">
-              <AiTag
-                variant="Document intelligence"
-                did="Named each document type and matched it to a submission"
-                review={uncertainOpen ? 'Needs your review' : 'Confirmed by you'}
-                why={{
-                  evidence: docs.map((d) => `${d.file} → ${d.type}`),
-                  confidence: docs.map((d) => `${Math.round(d.confidence * 100)}%`).join(' · '),
-                  approval: 'Matches under 80% confidence wait for you to confirm or change the application.',
-                  audit: docs.map((d) => `${d.file}: ${d.state}`),
-                }}
-              />
+            <div data-decision="ai-tag" className="mt-3 flex flex-col gap-1">
+              <AiTag variant="Document intelligence" did="Named each document type and matched it to a submission" compact />
+              <AiTag variant="Integration" did="Reads attachments in the open web inbox" compact />
             </div>
           </div>
           <button onClick={onClose} aria-label="Close panel" className="grid h-8 w-8 place-items-center rounded-full hover:bg-muted">
@@ -214,7 +205,7 @@ function CapturePanel({ onClose }: { onClose: () => void }) {
               Open Home <ArrowRight aria-hidden size={14} />
             </Button>
           </div>
-          <ProtoFooter />
+          <ProtoFooter compact />
         </div>
       </aside>
     </>
@@ -275,13 +266,17 @@ function DocRow({
     <li
       data-doc-row={doc.id}
       data-decision={uncertain ? 'low-confidence' : undefined}
-      className={`relative rounded-card border px-4 py-3.5 transition-colors ${previewing ? 'border-ink ring-1 ring-ink' : uncertain && shown ? 'border-warning-line' : 'border-line hover:border-line-strong'} ${uncertain && shown ? 'bg-[#fffaf2]' : 'bg-surface'}`}
+      onClick={(e) => {
+        if ((e.target as HTMLElement).closest('[data-picker]')) return
+        onPreview()
+      }}
+      className={`relative cursor-pointer rounded-card border px-4 py-3.5 transition-colors ${previewing ? 'border-ink ring-1 ring-ink' : uncertain && shown ? 'border-warning-line' : 'border-line hover:border-line-strong'} ${uncertain && shown ? 'bg-[#fffaf2]' : 'bg-surface'}`}
     >
       <span ref={ring} aria-hidden className="pointer-events-none absolute -inset-[3px] rounded-[12px] border-2 border-ink opacity-0" />
       <div className="flex items-start gap-3">
         <FileText aria-hidden size={18} className="mt-0.5 shrink-0 text-ink-3" />
         <div className="min-w-0 flex-1">
-          <button onClick={onPreview} aria-pressed={previewing} className="block w-full text-left" title="Preview this document">
+          <button aria-pressed={previewing} className="block w-full text-left" title="Preview this document">
             <span className="block truncate font-mono text-[13px] text-ink underline decoration-transparent underline-offset-2 hover:decoration-ink-3">{doc.file}</span>
             <span className="mt-0.5 block text-xs text-ink-3">
               <span className="font-medium text-ink-2">{doc.type}</span> · {doc.source} · {doc.from}
@@ -313,15 +308,12 @@ function DocRow({
             )}
           </div>
           {shown && !expanded && uncertain && (
-            <button
-              onClick={() => setPicking(true)}
-              className="mt-3 inline-flex h-6 items-center rounded-full border border-warning-line bg-warning-bg px-2.5 text-xs font-medium text-warning transition-colors hover:border-warning"
-            >
+            <button className="mt-3 inline-flex h-6 items-center rounded-full border border-warning-line bg-warning-bg px-2.5 text-xs font-medium text-warning transition-colors hover:border-warning">
               Needs review
             </button>
           )}
           {shown && expanded && (
-            <div className="mt-3 border-t border-line pt-3">
+            <div data-picker className="mt-3 cursor-default border-t border-line pt-3">
               <p className="text-xs text-ink-2">
                 {uncertain
                   ? `Only ${Math.round(doc.confidence * 100)}% sure. "HL" could be Harborview Freight Co. or Harbor Line Logistics.`

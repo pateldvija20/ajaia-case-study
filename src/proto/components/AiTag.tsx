@@ -29,7 +29,24 @@ export interface WhyInfo {
  * The reusable AI capability tag. Only placed where AI changed what the user
  * sees; anything affecting a decision carries a review state.
  */
-export function AiTag({ variant, did, review, why, align = 'left' }: { variant: AiVariant; did: string; review: ReviewState; why: WhyInfo; align?: 'left' | 'right' }) {
+export function AiTag({
+  variant,
+  did,
+  review,
+  why,
+  align = 'left',
+  placement = 'down',
+  compact = false,
+}: {
+  variant: AiVariant
+  did: string
+  review?: ReviewState
+  why?: WhyInfo
+  align?: 'left' | 'right'
+  placement?: 'down' | 'up'
+  /** Name and one line only: no review state, no "Why?" */
+  compact?: boolean
+}) {
   const [open, setOpen] = useState(false)
   const id = useId()
   const wrap = useRef<HTMLDivElement>(null)
@@ -73,9 +90,12 @@ export function AiTag({ variant, did, review, why, align = 'left' }: { variant: 
         {variant}
       </span>
       <span className="text-ink-2">{did}</span>
-      <span ref={pillRef} className={`inline-flex h-5 items-center rounded-full border px-1.5 text-[11px] font-medium ${REVIEW_STYLE[review]}`}>
-        {review}
-      </span>
+      {!compact && review && (
+        <span ref={pillRef} className={`inline-flex h-5 items-center rounded-full border px-1.5 text-[11px] font-medium ${REVIEW_STYLE[review]}`}>
+          {review}
+        </span>
+      )}
+      {!compact && why && (
       <button
         ref={btn}
         type="button"
@@ -86,13 +106,14 @@ export function AiTag({ variant, did, review, why, align = 'left' }: { variant: 
       >
         Why?
       </button>
-      {open && (
+      )}
+      {open && why && (
         <div
           ref={pop}
           id={id}
           role="dialog"
           aria-label={`Why: ${variant}`}
-          className={`absolute top-full z-40 mt-2 w-80 rounded-card border border-line bg-surface p-3 text-xs shadow-pop ${align === 'right' ? 'right-0' : 'left-0'}`}
+          className={`absolute z-40 w-80 ${placement === 'up' ? 'bottom-full mb-2' : 'top-full mt-2'} rounded-card border border-line bg-surface p-3 text-xs shadow-pop ${align === 'right' ? 'right-0' : 'left-0'}`}
         >
           <dl className="space-y-2.5">
             <div>

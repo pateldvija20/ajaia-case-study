@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
-import { ChevronDown, Lock } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
+import { AiTag } from './AiTag'
 import { tweenNumber } from '../motion'
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'quiet'
@@ -76,12 +77,22 @@ export function WhyDesign({ title = 'Why this design', evidence, children }: { t
   )
 }
 
-export function ProtoFooter() {
+export function ProtoFooter({ compact = false }: { compact?: boolean }) {
   return (
     <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-5 py-2.5 text-xs text-ink-3">
-      <span className="inline-flex items-center gap-1.5">
-        <Lock aria-hidden size={12} />
-        Processed in a private environment
+      <span data-decision="ai-tag">
+        <AiTag
+          variant="Private environment"
+          did={compact ? 'Processed inside the firm' : "Documents processed inside the firm's own environment"}
+          compact={compact}
+          review="Automatic"
+          placement="up"
+          why={{
+            evidence: ['Deployment chosen with the client', 'Documents and drafts stay inside that environment'],
+            approval: "Set by the firm's IT team, not per application.",
+            audit: ['No compliance certification is claimed in this prototype'],
+          }}
+        />
       </span>
       <a href="https://pateldvija20.vercel.app" target="_blank" rel="noreferrer" className="hover:text-ink hover:underline">
         Built by Dvija Patel
