@@ -31,13 +31,12 @@ export const AI_USE: [string, string][] = [
   ['Design.', 'I set the layout and the brand, and tried several directions. AI helped turn them into code.'],
 ]
 
+/** Scenario card copy: pain, then design with its evidence, then outcome, then the assumption and fallback. */
 export interface Scenario {
   id: 'C' | 'D' | 'A' | 'B' | 'E'
   title: string
   pain: string
-  evidence: string
   design: string
-  decide: string
   outcome: string
   /** Accessible name for the clip. */
   videoLabel: string
@@ -51,55 +50,45 @@ export const SCENARIOS: Scenario[] = [
     id: 'C',
     title: 'Every document in one place',
     pain: 'Documents arrive by portal, email and fax.',
-    evidence: '11 min to find them. 17 of 54 arrived off-portal.',
-    design: 'A browser panel finds attachments and matches each one to an application.',
-    decide: 'Confirm any match under 80% confidence.',
+    design: 'A browser panel matches each attachment to its application, replacing an 11-minute search where 17 of 54 arrive off-portal.',
     outcome: 'The hunt becomes a list to confirm.',
     videoLabel: 'Video: the capture panel confirms a 40% match',
-    assumes: 'Off-portal documents land in a web inbox or portal the panel can read.',
-    ifWrong: 'Drag-and-drop or a watched scan folder.',
+    assumes: 'This assumes off-portal documents land in a web inbox or portal the panel can read.',
+    ifWrong: 'If not, drag-and-drop or a watched scan folder takes over.',
   },
   {
     id: 'D',
     title: 'See what’s stuck',
-    pain: 'There’s no view of what’s waiting.',
-    evidence: 'Brokers take a median 2.1 days to reply. 9 took over 4.',
-    design: 'Home groups work by status. A row turns Overdue when its follow-up date passes.',
-    decide: 'Chase, call or wait. Nothing sends on its own.',
+    pain: 'There’s no view of what’s waiting on a broker.',
+    design: 'Home groups work by status and turns a row Overdue when its follow-up date passes, since brokers take a median 2.1 days and 9 took over 4.',
     outcome: 'Stalled work shows up before day four.',
     videoLabel: 'Video: Harbor Line moves from Waiting to Overdue',
-    assumes: 'One 2-day threshold fits most brokers.',
-    ifWrong: 'Per-broker thresholds. Drop click-to-call if brokers are email-only.',
+    assumes: 'This assumes one 2-day threshold fits most brokers.',
+    ifWrong: 'If not, thresholds go per broker, and click-to-call goes if brokers are email-only.',
   },
   {
     id: 'A',
     title: 'Catch mismatches side by side',
-    pain: 'Mismatches are found by reading.',
-    evidence: '“I just read carefully.” 35–38% of submissions have one.',
-    design: 'Both documents side by side with differences highlighted. Confirmed ones go into a drafted broker email.',
-    decide: 'Mark each one real or acceptable, then edit the email before it’s sent.',
-    outcome: 'A faster first flag and a faster email.',
+    pain: 'Mismatches are found only by careful reading.',
+    design: 'Both documents sit side by side with each difference highlighted, and 35–38% of submissions have at least one.',
+    outcome: 'The first flag and the broker email both come faster.',
     videoLabel: 'Video: a mismatch is marked real and the broker email is edited',
-    assumes: 'Every flagged difference needs a person, and broker emails repeat.',
-    ifWrong: 'Auto-classify minor differences. Free-form drafts.',
+    assumes: 'This assumes every flagged difference needs a person and broker emails repeat.',
+    ifWrong: 'If not, minor differences are auto-classified and drafts go free-form.',
   },
   {
     id: 'B',
     title: 'Fill a gap in place',
     pain: 'A missing document stalls the checklist.',
-    evidence: 'A missing document blocks the bind.',
-    design: 'The gap shows in the checklist with suggested values. This is where autofill lives.',
-    decide: 'Accept or dismiss each suggestion.',
-    outcome: 'Autofill where it helps, and the checklist stays the same.',
+    design: 'The gap shows inside the checklist with suggested values, because one missing document blocks the bind.',
+    outcome: 'Autofill helps where it’s useful, and the checklist stays the same.',
     videoLabel: 'Video: one suggestion accepted, one dismissed',
   },
   {
     id: 'E',
     title: 'Bind with a final check',
     pain: 'Binding can’t be undone.',
-    evidence: 'A missed mismatch “comes back to bite us later.”',
-    design: 'A summary of what was verified, then approval.',
-    decide: 'Confirm before the policy goes live.',
+    design: 'A summary of what was verified comes before approval, because a missed mismatch “comes back to bite us later.”',
     outcome: 'The riskiest step gets the most deliberate check.',
     videoLabel: 'Video: a policy is approved and bound',
   },
