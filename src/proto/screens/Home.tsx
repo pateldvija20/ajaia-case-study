@@ -3,19 +3,9 @@ import { ArrowRight, ChevronDown } from 'lucide-react'
 import { useProto } from '../store'
 import { daysWaiting, displayStatus, fmtDay, getChecklist, nextPrompt, STATUS_ORDER, STATUS_WORD, type DisplayStatus } from '../logic'
 import { flipBus } from '../flipBus'
-import { Flip, gsap, prefersReduced, useGSAP, withMotion } from '../motion'
-import { StatusBadge } from '../components/StatusBadge'
+import { Flip, gsap, prefersReduced, useGSAP, useIndicator, withMotion } from '../motion'
 import { Counter } from '../components/ui'
 import type { AppSection, Submission } from '../types'
-
-const GROUP_NOTE: Record<DisplayStatus, string> = {
-  mismatch: 'A document disagrees with the application',
-  missing: 'A required document has not arrived',
-  overdue: 'Past the follow-up date you set',
-  waiting: 'Asked the broker, within your follow-up window',
-  ready: 'Everything checks out; only your approval is left',
-  bound: '',
-}
 
 /** Inline call to action inside a sentence. */
 export function InlineLink({ children, onClick }: { children: ReactNode; onClick: () => void }) {
@@ -36,7 +26,7 @@ function Days({ n, label }: { n: number; label?: string }) {
   return <mark className="rounded-[4px] bg-warning-bg px-1 py-px font-semibold text-warning">{text}</mark>
 }
 
-/** The next step for a submission, written as a sentence with an inline link. */
+/** The next step for a submission: a sentence, then its link on its own line. */
 export function NextStep({ sub }: { sub: Submission }) {
   const day = useProto((s) => s.day)
   const openApp = useProto((s) => s.openApp)
@@ -45,28 +35,29 @@ export function NextStep({ sub }: { sub: Submission }) {
   const first = sub.broker.name.split(' ')[0]
   const asked = sub.askedFor?.split(' (')[0] ?? 'the missing document'
   const to = (section: AppSection) => () => openApp(sub.id, section)
+  let msg: ReactNode
+  let ctas: ReactNode
   switch (st) {
     case 'mismatch': {
       const d = sub.diffs?.[0]
-      return (
-        <>
-          {d ? `${d.field} differs: certificate ${d.right}, application ${d.left}. ` : 'A document disagrees with the application. '}
-          <InlineLink onClick={to('docs')}>Compare documents</InlineLink>
-        </>
-      )
+      msg = d ? `${d.field} differs: certificate ${d.right}, application ${d.left}.` : 'A document disagrees with the application.'
+      ctas = <InlineLink onClick={to('docs')}>Compare documents</InlineLink>
+      break
     }
     case 'missing': {
       const item = getChecklist(sub).find((c) => c.state === 'missing')
-      return (
-        <>
-          {item?.label ?? 'A document'} has not arrived. <InlineLink onClick={to('checklist')}>Ask {first} for it</InlineLink>
-        </>
-      )
+      msg = `${item?.label ?? 'A required document'} has not arrived.`
+      ctas = <InlineLink onClick={to('checklist')}>Ask {first} for it</InlineLink>
+      break
     }
     case 'overdue':
-      return (
+      msg = (
         <>
-          No reply from {first} for <Days n={day - (sub.lastContact ?? day)} /> on {asked}.{' '}
+          No reply from {first} for <Days n={day - (sub.lastContact ?? day)} /> on {asked}.
+        </>
+      )
+      ctas = (
+        <>
           <InlineLink
             onClick={() => {
               chooseFollow(sub.id, 'email')
@@ -74,44 +65,66 @@ export function NextStep({ sub }: { sub: Submission }) {
             }}
           >
             Follow up
-          </InlineLink>{' '}
-          or{' '}
+          </InlineLink>
           <InlineLink
             onClick={() => {
               chooseFollow(sub.id, 'call')
               openApp(sub.id, 'followup')
             }}
           >
-            call
+            Call {first}
           </InlineLink>
         </>
       )
+      break
     case 'waiting':
-      return (
+      msg = (
         <>
-          Asked {first} for {asked} <Days n={daysWaiting(sub, day)} label="ago" />. Next nudge {fmtDay(nextPrompt(sub))}. <InlineLink onClick={to('followup')}>Open</InlineLink>
+          Asked {first} for {asked} <Days n={daysWaiting(sub, day)} label="ago" />. Next nudge {fmtDay(nextPrompt(sub))}.
         </>
       )
+      ctas = <InlineLink onClick={to('followup')}>View follow-up</InlineLink>
+      break
     case 'ready':
-      return (
-        <>
-          All {sub.checklistCount} checklist items are done and every limit matches. <InlineLink onClick={to('bind')}>Review and bind</InlineLink>
-        </>
-      )
+      msg = `All ${sub.checklistCount} checklist items are done and every limit matches.`
+      ctas = <InlineLink onClick={to('bind')}>Review and bind</InlineLink>
+      break
     default:
-      return <>Bound {sub.boundOn}.</>
+      msg = `${sub.reason} on ${sub.boundOn}.`
+      ctas = <InlineLink onClick={to('bind')}>View summary</InlineLink>
   }
+  return (
+    <>
+      <span className="block">{msg}</span>
+      <span className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1">{ctas}</span>
+    </>
+  )
 }
 
-export const ROW_GRID = 'md:grid-cols-[minmax(0,250px)_minmax(0,190px)_minmax(0,1fr)]'
+const CELL: Record<DisplayStatus, string> = {
+  mismatch: 'bg-danger-bg text-danger',
+  missing: 'bg-info-bg text-info',
+  overdue: 'bg-warning-bg text-warning',
+  waiting: 'bg-[#fdf7ee] text-warning',
+  ready: 'bg-success-bg text-success',
+  bound: 'bg-muted text-ink-2',
+}
 
-/** One application as a table row: Application · Broker · Next step. */
-export function SubRow({ sub, showStatus = false }: { sub: Submission; showStatus?: boolean }) {
+const GRID = 'md:grid-cols-[132px_minmax(0,240px)_minmax(0,180px)_minmax(0,1fr)]'
+
+/** One application as a table row with a color-coded status cell. */
+export function SubRow({ sub }: { sub: Submission }) {
   const day = useProto((s) => s.day)
   const openApp = useProto((s) => s.openApp)
+  const st = displayStatus(sub, day)
+  const n = daysWaiting(sub, day)
   return (
-    <div role="row" data-flip-id={sub.id} data-enter className={`grid items-start gap-x-6 gap-y-2 border-t border-line bg-surface px-5 py-3.5 transition-colors hover:bg-[#fbfbf9] ${ROW_GRID}`}>
-      <div role="cell" className="min-w-0">
+    <div role="row" data-flip-id={sub.id} data-enter className={`grid border-t border-line bg-surface transition-colors hover:bg-[#fbfbf9] ${GRID}`}>
+      <div role="cell" className={`flex items-center gap-2 px-4 py-2 md:block md:py-3.5 ${CELL[st]}`}>
+        <span className="text-sm font-semibold">{STATUS_WORD[st]}</span>
+        {(st === 'waiting' || st === 'overdue') && <span className="block text-xs tabular-nums opacity-80">Day {n}</span>}
+      </div>
+      <div role="cell" className="min-w-0 px-4 pt-3 md:py-3.5">
         <button onClick={() => openApp(sub.id, 'status')} className="text-left">
           <span className="block truncate text-[15px] font-semibold hover:underline">{sub.client}</span>
           <span className="block text-xs text-ink-3">
@@ -119,31 +132,65 @@ export function SubRow({ sub, showStatus = false }: { sub: Submission; showStatu
           </span>
           <span className="block text-xs text-ink-3">Received {sub.received}</span>
         </button>
-        {showStatus && (
-          <span className="mt-1.5 block">
-            <StatusBadge status={displayStatus(sub, day)} days={daysWaiting(sub, day)} />
-          </span>
-        )}
       </div>
-      <div role="cell" className="text-sm text-ink-2">
+      <div role="cell" className="px-4 pt-2 text-sm text-ink-2 md:py-3.5">
         <span className="block text-ink">{sub.broker.name}</span>
         <span className="block text-xs text-ink-3">{sub.broker.firm}</span>
       </div>
-      <div role="cell" data-decision="next-step" className="text-sm leading-6 text-ink-2">
+      <div role="cell" data-decision="next-step" className="px-4 pb-3.5 pt-2 text-sm leading-6 text-ink-2 md:py-3.5">
         <NextStep sub={sub} />
       </div>
     </div>
   )
 }
 
-export function TableHead() {
+export const GROUP_NOTE: Record<DisplayStatus, string> = {
+  mismatch: 'A document disagrees with the application',
+  missing: 'A required document has not arrived',
+  overdue: 'Past the follow-up date set for the policy',
+  waiting: 'With the broker, inside the follow-up window',
+  ready: 'Every check passed; only your approval is left',
+  bound: 'Approved and active',
+}
+
+/** The table used on Home and Applications. Optionally grouped by status. */
+export function StatusTable({ rows, label, grouped = false, empty }: { rows: Submission[]; label: string; grouped?: boolean; empty: string }) {
+  const day = useProto((s) => s.day)
+  const groups = grouped
+    ? STATUS_ORDER.map((k) => ({ key: k, rows: rows.filter((s) => displayStatus(s, day) === k) })).filter((g) => g.rows.length)
+    : [{ key: null, rows }]
   return (
-    <div role="row" className={`hidden gap-x-6 bg-muted/70 px-5 py-2 text-xs font-medium text-ink-3 md:grid ${ROW_GRID}`}>
-      <span role="columnheader">Application</span>
-      <span role="columnheader">Broker</span>
-      <span role="columnheader">Next step</span>
+    <div role="table" aria-label={label} className="overflow-hidden rounded-panel border border-line bg-surface shadow-card">
+      <div role="row" className={`hidden bg-muted/70 text-xs font-medium text-ink-3 md:grid ${GRID}`}>
+        <span role="columnheader" className="px-4 py-2">Status</span>
+        <span role="columnheader" className="px-4 py-2">Application</span>
+        <span role="columnheader" className="px-4 py-2">Broker</span>
+        <span role="columnheader" className="px-4 py-2">Next step</span>
+      </div>
+      {groups.map((g) => (
+        <section key={g.key ?? 'all'} role="rowgroup" aria-label={g.key ? STATUS_WORD[g.key] : label}>
+          {g.key && (
+            <h3 className="flex items-baseline gap-2 border-t border-line bg-canvas px-4 py-2">
+              <span className="text-sm font-semibold">{STATUS_WORD[g.key]}</span>
+              <span className="text-xs tabular-nums text-ink-3">{g.rows.length}</span>
+              <span className="text-xs text-ink-3">· {GROUP_NOTE[g.key]}</span>
+            </h3>
+          )}
+          {g.rows.map((s) => (
+            <SubRow key={s.id} sub={s} />
+          ))}
+        </section>
+      ))}
+      {!rows.length && <p className="border-t border-line px-5 py-8 text-sm text-ink-3">{empty}</p>}
     </div>
   )
+}
+
+/** Status-ordered, then by age. */
+export function byStatusThenAge(day: number, sort: 'oldest' | 'newest' = 'oldest') {
+  return (a: Submission, b: Submission) =>
+    STATUS_ORDER.indexOf(displayStatus(a, day)) - STATUS_ORDER.indexOf(displayStatus(b, day)) ||
+    (sort === 'oldest' ? a.receivedDay - b.receivedDay : b.receivedDay - a.receivedDay)
 }
 
 export function Home() {
@@ -152,7 +199,9 @@ export function Home() {
   const setSort = useProto((s) => s.setHomeSort)
   const clearPendingMove = useProto((s) => s.clearPendingMove)
   const root = useRef<HTMLDivElement>(null)
+  const tabsRef = useRef<HTMLDivElement>(null)
   const flipState = useRef<Flip.FlipState | null>(null)
+  useIndicator(tabsRef, homeFilter)
 
   // While a move is pending, show the row as it was, then let it move.
   const display = useMemo(
@@ -161,17 +210,8 @@ export function Home() {
   )
   const open = display.filter((s) => s.status !== 'bound')
   const counts = Object.fromEntries(STATUS_ORDER.map((k) => [k, open.filter((s) => displayStatus(s, day) === k).length])) as Record<DisplayStatus, number>
-  const groups = STATUS_ORDER.filter((k) => k !== 'bound' && (homeFilter === 'all' || homeFilter === k || (homeFilter === 'waiting' && k === 'overdue')))
-    .map((k) => ({
-      key: k,
-      rows: open
-        .filter((s) => displayStatus(s, day) === k)
-        .sort((a, b) => (homeSort === 'oldest' ? a.receivedDay - b.receivedDay : b.receivedDay - a.receivedDay)),
-    }))
-    .filter((g) => g.rows.length)
-
-  const orderKey = groups.map((g) => g.key + ':' + g.rows.map((r) => r.id).join(',')).join('|')
-
+  const rows = open.filter((s) => homeFilter === 'all' || displayStatus(s, day) === homeFilter).sort(byStatusThenAge(day, homeSort))
+  const orderKey = rows.map((r) => r.id + displayStatus(r, day)).join('|')
   useEffect(
     () =>
       flipBus.register(() => {
@@ -234,61 +274,57 @@ export function Home() {
   )
 
   const needYou = counts.mismatch + counts.missing + counts.overdue
-  const withBrokers = counts.waiting
-  const boxes: { key: DisplayStatus; label: string; n: number; tone: string; note?: string }[] = [
-    { key: 'mismatch', label: 'Mismatch', n: counts.mismatch, tone: 'text-danger' },
-    { key: 'missing', label: 'Missing', n: counts.missing, tone: 'text-info' },
-    { key: 'waiting', label: 'Waiting', n: counts.waiting + counts.overdue, tone: 'text-warning', note: counts.overdue ? `${counts.overdue} overdue` : undefined },
-    { key: 'ready', label: 'Ready', n: counts.ready, tone: 'text-success' },
+  const boxes: { label: string; n: number; tone: string; note?: string }[] = [
+    { label: 'Mismatch', n: counts.mismatch, tone: 'text-danger' },
+    { label: 'Missing', n: counts.missing, tone: 'text-info' },
+    { label: 'Waiting', n: counts.waiting + counts.overdue, tone: 'text-warning', note: counts.overdue ? `${counts.overdue} overdue` : undefined },
+    { label: 'Ready', n: counts.ready, tone: 'text-success' },
   ]
-  const active = (k: DisplayStatus) => homeFilter === k || (k === 'waiting' && homeFilter === 'overdue')
+  const tabs: (DisplayStatus | 'all')[] = ['all', 'mismatch', 'missing', 'overdue', 'waiting', 'ready']
 
   return (
-    <div ref={root} data-decision="home" className="mx-auto w-full max-w-[1100px] px-4 pb-10 pt-6 md:px-8">
+    <div ref={root} data-decision="home" className="mx-auto w-full max-w-[1120px] px-4 pb-10 pt-6 md:px-8">
       <header data-enter>
-        <p className="text-xs font-medium uppercase tracking-[0.08em] text-ink-3">{fmtDay(day)}</p>
-        <h1 className="mt-1 font-display text-[32px] leading-10 tracking-[-0.01em]">What needs you today</h1>
+        <h1 className="font-display text-[32px] leading-10 tracking-[-0.01em]">Open applications</h1>
         <p className="mt-0.5 text-sm text-ink-2">
-          {needYou} need your review, {withBrokers} {withBrokers === 1 ? 'is' : 'are'} with brokers, {counts.ready} {counts.ready === 1 ? 'is' : 'are'} ready to bind.
+          {fmtDay(day)} · {needYou} need you, {counts.waiting} {counts.waiting === 1 ? 'is' : 'are'} with brokers, {counts.ready} {counts.ready === 1 ? 'is' : 'are'} ready to bind
         </p>
       </header>
 
-      <div data-enter role="radiogroup" aria-label="Filter by status" className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-card border border-line bg-line md:grid-cols-4">
-        {boxes.map((b) => {
-          const on = active(b.key)
-          return (
-            <button
-              key={b.key}
-              role="radio"
-              aria-checked={on}
-              onClick={() => setFilter(on ? 'all' : b.key)}
-              className={`relative bg-surface px-4 py-3 text-left transition-colors hover:bg-[#fbfbf9] ${on ? 'bg-canvas' : ''}`}
-            >
-              {on && <span aria-hidden className="absolute inset-x-0 top-0 h-0.5 bg-ink" />}
-              <span className="block text-xs text-ink-3">{b.label}</span>
-              <span className="mt-0.5 flex items-baseline gap-2">
-                <Counter value={b.n} className={`font-display text-[30px] leading-9 ${b.n ? b.tone : 'text-ink-3'}`} />
-                {b.note && <span className="text-xs text-warning">{b.note}</span>}
-              </span>
-            </button>
-          )
-        })}
-      </div>
+      <dl data-enter className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-card border border-line bg-line md:grid-cols-4">
+        {boxes.map((b) => (
+          <div key={b.label} className="bg-surface px-4 py-3">
+            <dt className="text-xs text-ink-3">{b.label}</dt>
+            <dd className="mt-0.5 flex items-baseline gap-2">
+              <Counter value={b.n} className={`font-display text-[30px] leading-9 ${b.n ? b.tone : 'text-ink-3'}`} />
+              {b.note && <span className="text-xs text-warning">{b.note}</span>}
+            </dd>
+          </div>
+        ))}
+      </dl>
 
-      <div data-enter className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-ink-2">
-          {homeFilter === 'all' ? (
-            'Showing all open applications'
-          ) : (
-            <>
-              Showing {STATUS_WORD[homeFilter].toLowerCase()} only ·{' '}
-              <button onClick={() => setFilter('all')} className="font-medium text-ink underline underline-offset-2">
-                show all
+      <div data-enter className="mt-6 flex flex-wrap items-end justify-between gap-3 border-b border-line">
+        <div ref={tabsRef} role="tablist" aria-label="Filter by status" className="relative -mb-px flex gap-5 overflow-x-auto">
+          <span data-indicator aria-hidden className="absolute bottom-0 left-0 h-0.5 w-px origin-left bg-ink opacity-0" />
+          {tabs.map((t) => {
+            const on = homeFilter === t
+            const n = t === 'all' ? open.length : counts[t]
+            return (
+              <button
+                key={t}
+                role="tab"
+                aria-selected={on}
+                data-active={on}
+                onClick={() => setFilter(t)}
+                className={`flex shrink-0 items-center gap-1.5 pb-2.5 pt-1 text-sm font-medium transition-colors ${on ? 'text-ink' : 'text-ink-3 hover:text-ink'}`}
+              >
+                {t === 'all' ? 'All' : STATUS_WORD[t]}
+                <span className="rounded-full bg-muted px-1.5 text-xs tabular-nums text-ink-2">{n}</span>
               </button>
-            </>
-          )}
-        </p>
-        <label className="relative inline-flex h-8 items-center rounded-full border border-line-strong bg-surface pl-3 text-sm transition-colors focus-within:border-ink hover:border-ink-3">
+            )
+          })}
+        </div>
+        <label className="relative mb-2 inline-flex h-8 items-center rounded-full border border-line-strong bg-surface pl-3 text-sm transition-colors focus-within:border-ink hover:border-ink-3">
           <span className="text-ink-3">Sort</span>
           <select
             value={homeSort}
@@ -302,21 +338,8 @@ export function Home() {
         </label>
       </div>
 
-      <div role="table" aria-label="Open applications grouped by status" className="mt-3 overflow-hidden rounded-panel border border-line bg-surface shadow-card">
-        <TableHead />
-        {groups.map((g) => (
-          <section key={g.key} role="rowgroup" aria-label={STATUS_WORD[g.key]}>
-            <h2 data-enter className="flex items-baseline gap-2 border-t border-line bg-canvas px-5 py-2">
-              <span className="text-sm font-semibold">{STATUS_WORD[g.key]}</span>
-              <span className="text-xs tabular-nums text-ink-3">{g.rows.length}</span>
-              <span className="text-xs text-ink-3">· {GROUP_NOTE[g.key]}</span>
-            </h2>
-            {g.rows.map((s) => (
-              <SubRow key={s.id} sub={s} />
-            ))}
-          </section>
-        ))}
-        {!groups.length && <p className="border-t border-line px-5 py-8 text-sm text-ink-3">Nothing here. Try another filter.</p>}
+      <div className="mt-4">
+        <StatusTable rows={rows} label="Open applications" empty="Nothing in this tab." />
       </div>
     </div>
   )

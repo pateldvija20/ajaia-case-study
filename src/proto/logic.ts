@@ -131,6 +131,9 @@ const OPEN_ITEM: Record<string, { label: string; detail: string }> = {
   alder: { label: 'Statement of values', detail: 'Updated version requested from the broker' },
   harborview: { label: 'Driver schedule', detail: 'Requested from the broker' },
   kestrel: { label: 'Signed payroll schedule', detail: 'Requested from the broker' },
+  westfield: { label: 'Equipment schedule', detail: 'Not found in portal, inbox or uploads' },
+  tamarack: { label: 'Liquor liability supplement (signed)', detail: 'Requested from the broker' },
+  quill: { label: 'Prior acts date', detail: 'Requested from the broker' },
 }
 
 /** The Bindwise checklist for any submission, derived from its state. */
@@ -141,7 +144,7 @@ export function getChecklist(sub: Submission): ChecklistItem[] {
   if (open && !labels.includes(open.label)) labels[labels.length - 1] = open.label
   return labels.map((label, i) => {
     const id = `g${i}`
-    if (open && label === open.label && sub.status === 'waiting') return { id, label, state: 'missing', detail: open.detail }
+    if (open && label === open.label && (sub.status === 'waiting' || sub.status === 'missing')) return { id, label, state: 'missing', detail: open.detail }
     if (sub.id === 'harbor' && label === 'Coverage limits match the application' && (sub.status === 'mismatch' || sub.status === 'waiting'))
       return { id, label, state: 'missing', detail: 'Each occurrence: $1,000,000 on the certificate, $2,000,000 on the application' }
     return { id, label, state: 'done', detail: label.includes('match') ? 'Checked against the application' : 'On file' }

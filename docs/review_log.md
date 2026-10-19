@@ -68,3 +68,20 @@ Three worst problems found and fixed:
 1. The view switch's pill used the stretch indicator (a 1px bar scaled up), which distorted its rounded corners. It is now a fixed half-width pill that only translates, with `back.out(1.1)`.
 2. The decision tooltip appeared on any focus, including while typing in the email textarea, and on touch. It now shows on hover and on keyboard focus only.
 3. The extension's count badge was clipped by the toolbar edge. The toolbar got more height and right padding.
+
+## Round 5 (status tabs, shared table, Demo panel)
+
+Changes from the author: Home uses status tabs instead of grouping; Applications groups by status; both share one table with a color-coded status cell and the next-step link on its own line. Left panel reads Demo, author, an outlined date box and the design-decision card; Guided tour replaced the view switch, and the mobile view was removed. The capture extension is disabled on the Bind Desk tab and pulses only on the inbox tab. More applications were added, including In review and Closed ones. Deploys became manual.
+
+| Criterion | Score |
+|---|---|
+| First-glance clarity | 8 |
+| Readability at 390 px | 8 |
+| Motion quality | 8 |
+| Consistency with references | 8 |
+| Copy quality | 8 |
+
+Three worst problems found and fixed:
+1. The Guided tour button collapsed to a sliver in the panel's column layout (`flex-1` with no height basis). It now keeps its 40 px height.
+2. The Home design decision still said "Grouped by", which no longer matched. It now describes the status tabs.
+3. Closed rows read "Bound Tue 14 Apr. Bound with no differences found." The message now says it once: "Bound with no differences found on Tue 14 Apr."

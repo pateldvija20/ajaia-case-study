@@ -1,6 +1,6 @@
 # House rules
 
-Case study site (`/`) and demo prototype (`/#/prototype`) for the Marsh & Colby discovery assessment, prepared for Ajaia. Vite + React + TypeScript, Tailwind 4, GSAP, zustand. Deployed to GitHub Pages by `.github/workflows/deploy.yml` on push to `main`.
+Case study site (`/`) and demo prototype (`/#/prototype`) for the Marsh & Colby discovery assessment, prepared for Ajaia. Vite + React + TypeScript, Tailwind 4, GSAP, zustand. Deployed to GitHub Pages by `.github/workflows/deploy.yml`, which runs only when triggered manually. Never deploy unless the author asks.
 
 ## Look
 

@@ -301,6 +301,88 @@ SUBMISSIONS.push({
   application: { title: 'Commercial application', kind: 'Application', source: 'Client portal', received: 'Mon 30 Mar', fields: [] },
 })
 
+const simple = (
+  id: string,
+  client: string,
+  line: string,
+  policyNo: string,
+  broker: Broker,
+  extra: Partial<(typeof SUBMISSIONS)[number]> & Pick<(typeof SUBMISSIONS)[number], 'status' | 'reason' | 'receivedDay' | 'received' | 'effective'>,
+) =>
+  SUBMISSIONS.push({
+    id,
+    client,
+    line,
+    policyNo,
+    week: extra.receivedDay >= -1 ? 'current' : 'older',
+    broker,
+    followUpDays: 2,
+    checklistCount: 11,
+    documents: [{ id: `${id}1`, name: `Application_${client.split(' ')[0]}.pdf`, type: 'Commercial application', source: 'Client portal', received: extra.received }],
+    application: { title: 'Commercial application', kind: 'Application', source: 'Client portal', received: extra.received, fields: [] },
+    ...extra,
+  })
+
+simple('westfield', 'Westfield Masonry', 'Inland marine', 'IM-26-402118', keystone, {
+  status: 'missing',
+  reason: 'Equipment schedule not received',
+  received: 'Tue 14 Apr',
+  receivedDay: 0,
+  effective: '1 May 2026',
+})
+simple('tamarack', 'Tamarack Brewing Co.', 'Liquor liability', 'LL-26-055903', coastline, {
+  status: 'waiting',
+  reason: 'Asked broker for the signed liquor liability supplement',
+  askedFor: 'the signed liquor liability supplement',
+  received: 'Fri 10 Apr',
+  receivedDay: -4,
+  waitingSince: -2,
+  lastContact: -2,
+  effective: '24 Apr 2026',
+})
+simple('quill', 'Quill & Ledger Accounting', 'Professional liability', 'PL-26-810274', tidewater, {
+  status: 'waiting',
+  reason: 'Asked broker for the prior acts date',
+  askedFor: 'the prior acts date',
+  received: 'Mon 13 Apr',
+  receivedDay: -1,
+  waitingSince: 0,
+  lastContact: 0,
+  effective: '1 May 2026',
+})
+simple('lumen', 'Lumen Optics Studio', 'Businessowners', 'BOP-26-221460', tidewater, {
+  status: 'ready',
+  reason: 'All 11 checklist items complete · every limit matches the application',
+  received: 'Fri 10 Apr',
+  receivedDay: -4,
+  effective: '20 Apr 2026',
+})
+simple('bayside', 'Bayside Pet Clinic', 'General liability', 'GL-26-119077', keystone, {
+  status: 'ready',
+  reason: 'Missing loss runs arrived Mon 13 Apr · every limit matches',
+  received: 'Thu 9 Apr',
+  receivedDay: -5,
+  effective: '22 Apr 2026',
+})
+simple('cobalt', 'Cobalt Hydraulics', 'Commercial property', 'CP-26-302281', coastline, {
+  status: 'bound',
+  reason: 'Bound after the statement of values was updated',
+  received: 'Wed 8 Apr',
+  receivedDay: -6,
+  boundDay: -1,
+  boundOn: 'Mon 13 Apr',
+  effective: '15 Apr 2026',
+})
+simple('fernwood', 'Fernwood Day Care', 'General liability', 'GL-26-118990', tidewater, {
+  status: 'bound',
+  reason: 'Bound with no differences found',
+  received: 'Mon 13 Apr',
+  receivedDay: -1,
+  boundDay: 0,
+  boundOn: 'Tue 14 Apr',
+  effective: '1 May 2026',
+})
+
 /** Documents the capture panel "detects" in the webmail view. */
 export const CAPTURE_DOCS: CaptureDoc[] = [
   {

@@ -9,7 +9,7 @@ const BASE = process.env.BASE_URL ?? 'http://localhost:5178/ajaia-case-study/'
 const OUT = new URL('../docs/review/', import.meta.url).pathname
 const RAW = OUT + 'raw/'
 mkdirSync(RAW, { recursive: true })
-const FRAMES = ['1a', '1b', '1c', '2a', '2b', '2c', '3a', '3b', '4a', '4b', '4c', '5a', '5b', '6a', '6b', 'F']
+const FRAMES = ['1a', '1b', '1c', '2a', '2b', '2c', '3a', '3b', '4a', '4b', '4c', '5a', '5b', '6a', '6b']
 const browser = await chromium.launch({ channel: 'chrome', headless: true })
 const errors = []
 
@@ -66,17 +66,15 @@ async function strip(name, url, act, times, clip, vw = 1440) {
   await p.close()
 }
 const full = undefined
-await strip('capture-entrance', '#/prototype', (p) => p.getByRole('button', { name: /Bind Desk capture extension/ }).click(), [80, 250, 500, 1000, 1500, 2000], { x: 900, y: 20, width: 540, height: 700 })
+await strip('capture-entrance', '#/prototype', async (p) => { await p.getByRole('tab', { name: /Inbox/ }).click(); await p.getByRole('button', { name: /Bind Desk capture extension/ }).click() }, [80, 250, 500, 1000, 1500, 2000], { x: 900, y: 20, width: 540, height: 700 })
 await strip('apps-tab', '#/prototype?frame=2b', (p) => p.getByRole('tab', { name: /Closed/ }).click(), [40, 120, 220, 450], { x: 540, y: 260, width: 520, height: 120 })
 await strip('decide-draft', '#/prototype?frame=3a', async (p) => {
   await p.getByRole('radio', { name: 'Real mismatch' }).first().click()
   await p.getByRole('radio', { name: 'Acceptable' }).nth(1).click()
 }, [100, 300, 700, 1100], full)
 await strip('highlight-to-top', '#/prototype?frame=3a', (p) => p.locator('[data-hl="right-ins"]').click(), [60, 200, 450, 900], { x: 1060, y: 140, width: 340, height: 520 })
-await strip('device-switch', '#/prototype?frame=2a', (p) => p.getByRole('radio', { name: 'Mobile glance' }).click(), [40, 150, 300, 600], full)
-await strip('decision-tooltip', '#/prototype?frame=2a', (p) => p.locator('[data-flip-id="alder"] [data-decision="next-step"]').hover(), [60, 250], { x: 700, y: 500, width: 740, height: 400 })
-await strip('extension-pulse', '#/prototype', null, [100, 500, 900, 1300], { x: 1240, y: 60, width: 200, height: 100 })
-await strip('device-pill', '#/prototype', (p) => p.getByRole('radio', { name: 'Mobile glance' }).click(), [40, 120, 220, 400], { x: 0, y: 740, width: 280, height: 90 })
+await strip('decision-panel', '#/prototype?frame=2a', (p) => p.locator('[data-flip-id="alder"] [data-decision="next-step"]').hover(), [60, 250], { x: 0, y: 200, width: 280, height: 260 })
+await strip('extension-pulse', '#/prototype?frame=1a', (p) => p.getByRole('button', { name: 'Close panel' }).click(), [100, 500, 900, 1300], { x: 1240, y: 60, width: 200, height: 100 })
 await strip('bind', '#/prototype?frame=6a', (p) => p.getByRole('button', { name: 'Approve and bind…' }).click(), [40, 120, 250, 450], full)
 
 await browser.close()

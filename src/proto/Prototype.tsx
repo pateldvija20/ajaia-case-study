@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Archive, ChevronLeft, ChevronRight, Compass, FileSearch, Home as HomeIcon, Laptop, Mail, RotateCcw, RotateCw, Smartphone } from 'lucide-react'
+import { Archive, ChevronLeft, ChevronRight, Compass, FileSearch, Home as HomeIcon, Mail, RotateCcw, RotateCw } from 'lucide-react'
 import { useProto, FRAMES, type FrameId, type ScenarioId } from './store'
 import type { Screen } from './types'
 import { USER } from './mockData'
@@ -13,7 +13,6 @@ import { Home } from './screens/Home'
 import { Applications } from './screens/Applications'
 import { AppDetail } from './screens/AppDetail'
 import { Capture } from './screens/Capture'
-import { MobileGlance } from './screens/MobileList'
 
 const SCENARIOS: ScenarioId[] = ['A', 'B', 'C', 'D', 'E', 'F']
 
@@ -50,24 +49,28 @@ export default function Prototype() {
 const AUTHOR = 'Dvija Patel'
 
 function WindowPanel() {
-  const { day, device, tour } = useProto()
+  const { day, tour, hoverDecision, screen, subs } = useProto()
   const advanceDay = useProto((s) => s.advanceDay)
   const previousDay = useProto((s) => s.previousDay)
   const reset = useProto((s) => s.reset)
-  const setDevice = useProto((s) => s.setDevice)
   const setTour = useProto((s) => s.setTour)
   const loadFrame = useProto((s) => s.loadFrame)
   const dayRef = useRef<HTMLSpanElement>(null)
-  const pill = useRef<HTMLSpanElement>(null)
-  const firstPill = useRef(true)
+  const textRef = useRef<HTMLDivElement>(null)
 
-  // Equal-width segments: the pill only translates, so its corners never distort.
+  // Screen-level decision when nothing is hovered.
+  let base = 'home'
+  if (screen.name === 'applications') base = 'applications'
+  else if (screen.name === 'capture') base = 'capture'
+  else if (screen.name === 'app') {
+    const s = subs.find((x) => x.id === screen.id)
+    base = s?.status === 'mismatch' ? 'compare' : s?.status === 'missing' ? 'checklist' : s?.status === 'waiting' ? 'followup' : 'bind'
+  }
+  const key = hoverDecision ?? base
+  const d = DECISIONS[key] ?? DECISIONS.home
   useLayoutEffect(() => {
-    const x = device === 'desktop' ? 0 : 100
-    if (firstPill.current || prefersReduced()) gsap.set(pill.current, { xPercent: x })
-    else gsap.to(pill.current, { xPercent: x, duration: 0.32, ease: 'back.out(1.1)' })
-    firstPill.current = false
-  }, [device])
+    if (!prefersReduced() && textRef.current) gsap.fromTo(textRef.current, { opacity: 0, y: 4 }, { opacity: 1, y: 0, duration: 0.22, ease: 'power3.out' })
+  }, [key])
 
   const shiftDay = (dir: 1 | -1) => {
     if (dir === 1) advanceDay()
@@ -75,37 +78,18 @@ function WindowPanel() {
     if (dayRef.current && !prefersReduced()) gsap.fromTo(dayRef.current, { y: dir * -8, opacity: 0 }, { y: 0, opacity: 1, duration: 0.28, ease: 'power3.out' })
   }
 
-  const ctl = 'grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/20 text-white transition-colors hover:border-white/50 hover:bg-white/10 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent'
+  const ctl = 'grid h-8 w-8 shrink-0 place-items-center rounded-full text-white transition-colors hover:bg-white/10 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent'
 
   return (
-    <aside
-      aria-label="Prototype controls"
-      className="flex shrink-0 flex-col gap-4 bg-primary px-4 py-3 text-white lg:h-dvh lg:w-[280px] lg:gap-7 lg:px-6 lg:py-8"
-    >
+    <aside aria-label="Prototype controls" className="flex shrink-0 flex-col gap-4 bg-primary px-4 py-3 text-white lg:h-dvh lg:w-[280px] lg:gap-5 lg:px-6 lg:py-8">
       <div>
-        <p className="font-display text-[22px] leading-7 lg:text-[25px] lg:leading-8">Interactive prototype</p>
-        <p className="mt-1 text-sm text-white/70">{AUTHOR}</p>
+        <p className="font-display text-[26px] leading-8 lg:text-[32px] lg:leading-9">Demo</p>
+        <p className="mt-0.5 text-sm text-white/70">{AUTHOR}</p>
       </div>
 
-      <div className="hidden lg:block">
-        {tour.on ? (
-          <TourCard />
-        ) : (
-          <button
-            onClick={() => {
-              setTour({ on: true, step: 0 })
-              loadFrame(TOUR[0].frame)
-            }}
-            className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full bg-white px-4 text-sm font-medium text-ink transition-colors hover:bg-white/90 active:translate-y-px"
-          >
-            <Compass aria-hidden size={15} /> Guided tour
-          </button>
-        )}
-      </div>
-
-      <div>
-        <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-white/60">Date</p>
-        <div className="mt-1.5 flex items-center gap-2">
+      <div className="rounded-panel border border-white/25 px-3 py-2.5">
+        <p className="px-1 text-[11px] font-medium uppercase tracking-[0.08em] text-white/60">Date</p>
+        <div className="mt-1 flex items-center gap-1">
           <button onClick={() => shiftDay(-1)} disabled={day <= 0} aria-label="Previous day" className={ctl}>
             <ChevronLeft aria-hidden size={16} />
           </button>
@@ -120,26 +104,31 @@ function WindowPanel() {
         </div>
       </div>
 
-      <div className="mt-auto flex items-center gap-2 lg:flex-col lg:items-stretch lg:gap-3">
-        <div role="radiogroup" aria-label="View" className="relative grid flex-1 grid-cols-2 rounded-full bg-white/10 p-1">
-          <span ref={pill} aria-hidden className="pointer-events-none absolute bottom-1 left-1 top-1 w-[calc(50%-4px)] rounded-full bg-white" />
-          {(
-            [
-              ['desktop', 'Desktop', Laptop],
-              ['mobile', 'Mobile glance', Smartphone],
-            ] as const
-          ).map(([k, label, Icon]) => (
-            <button
-              key={k}
-              role="radio"
-              aria-checked={device === k}
-              onClick={() => setDevice(k)}
-              className={`relative z-10 inline-flex h-8 items-center justify-center gap-1.5 rounded-full text-sm font-medium transition-colors duration-200 ${device === k ? 'text-ink' : 'text-white/70 hover:text-white'}`}
-            >
-              <Icon aria-hidden size={14} /> {label}
-            </button>
-          ))}
+      <section aria-label="Design decision" aria-live="polite" className="hidden rounded-panel bg-white/[0.07] p-4 lg:block">
+        <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-white/60">Design decision</p>
+        <div ref={textRef}>
+          <p className="mt-2 text-sm font-semibold">{d.area}</p>
+          <p className="mt-1 text-[15px] leading-6 text-white/85">{d.text}</p>
         </div>
+        <p className="mt-3 text-xs text-white/50">Hover any part of the demo to see the decision behind it.</p>
+      </section>
+
+      <div className="mt-auto flex items-center gap-2 lg:flex-col lg:items-stretch lg:gap-3">
+        {tour.on ? (
+          <div className="hidden lg:block">
+            <TourCard />
+          </div>
+        ) : (
+          <button
+            onClick={() => {
+              setTour({ on: true, step: 0 })
+              loadFrame(TOUR[0].frame)
+            }}
+            className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-white px-4 lg:flex-none text-sm font-medium text-ink transition-colors hover:bg-white/90 active:translate-y-px"
+          >
+            <Compass aria-hidden size={15} /> Guided tour
+          </button>
+        )}
         <button
           onClick={reset}
           className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-full border border-white/25 px-4 text-sm font-medium text-white transition-colors hover:border-white/60 hover:bg-white/10 active:translate-y-px"
@@ -151,68 +140,11 @@ function WindowPanel() {
   )
 }
 
-/* ------------------------------ design decision tooltip ------------------------------ */
-
-/** Follows the cursor over any area that carries a data-decision. */
-function DecisionTip() {
-  const key = useProto((s) => s.hoverDecision)
-  const tip = useRef<HTMLDivElement>(null)
-  const pos = useRef({ x: 0, y: 0 })
-  useEffect(() => {
-    const move = (e: PointerEvent) => {
-      pos.current = { x: e.clientX, y: e.clientY }
-      place()
-    }
-    const place = () => {
-      const el = tip.current
-      if (!el) return
-      const w = el.offsetWidth
-      const h = el.offsetHeight
-      let x = pos.current.x + 18
-      let y = pos.current.y + 20
-      if (x + w > window.innerWidth - 12) x = pos.current.x - w - 14
-      if (y + h > window.innerHeight - 12) y = pos.current.y - h - 14
-      el.style.transform = `translate(${x}px, ${y}px)`
-    }
-    const focus = (e: FocusEvent) => {
-      const t = e.target as HTMLElement
-      // Keyboard focus only; never while typing in a field.
-      if (!t.matches?.(':focus-visible') || t.matches('input, textarea, select')) return
-      const r = t.getBoundingClientRect?.()
-      if (r) {
-        pos.current = { x: r.left, y: r.bottom }
-        requestAnimationFrame(place)
-      }
-    }
-    window.addEventListener('pointermove', move)
-    window.addEventListener('focusin', focus)
-    return () => {
-      window.removeEventListener('pointermove', move)
-      window.removeEventListener('focusin', focus)
-    }
-  }, [])
-  const d = key ? DECISIONS[key] : null
-  const inner = useRef<HTMLDivElement>(null)
-  useLayoutEffect(() => {
-    if (d && inner.current && !prefersReduced()) gsap.fromTo(inner.current, { opacity: 0, y: 4 }, { opacity: 1, y: 0, duration: 0.18, ease: 'power3.out' })
-  }, [key, d])
-  return (
-    <div ref={tip} aria-hidden className="pointer-events-none fixed left-0 top-0 z-[80]" style={{ visibility: d ? 'visible' : 'hidden' }}>
-      {d && (
-        <div ref={inner} className="w-[280px] rounded-card bg-primary px-3.5 py-3 text-white shadow-pop">
-          <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-white/55">Design decision · {d.area}</p>
-          <p className="mt-1 text-sm leading-5">{d.text}</p>
-        </div>
-      )}
-    </div>
-  )
-}
-
 /* ------------------------------ stage + frames ------------------------------ */
 
-function ExtensionIcon({ onClick, open, count }: { onClick: () => void; open: boolean; count: number }) {
+function ExtensionIcon({ onClick, open, count, enabled }: { onClick: () => void; open: boolean; count: number; enabled: boolean }) {
   const ring = useRef<HTMLSpanElement>(null)
-  const attention = !open && count > 0
+  const attention = enabled && !open && count > 0
   useGSAP(
     () => {
       if (!attention) return
@@ -225,16 +157,17 @@ function ExtensionIcon({ onClick, open, count }: { onClick: () => void; open: bo
   return (
     <button
       onClick={onClick}
+      disabled={!enabled}
       aria-pressed={open}
-      aria-label={`Bind Desk capture extension, ${count} documents found`}
-      title="Bind Desk capture"
-      className="relative grid h-7 w-7 shrink-0 place-items-center"
+      aria-label={enabled ? `Bind Desk capture extension, ${count} documents found` : 'Bind Desk capture extension, works on your inbox tab'}
+      title={enabled ? 'Bind Desk capture' : 'Capture works on your inbox tab'}
+      className="relative grid h-7 w-7 shrink-0 place-items-center disabled:cursor-not-allowed disabled:opacity-35"
     >
       {attention && <span ref={ring} aria-hidden className="absolute inset-0 rounded-md bg-ink" />}
       <span className={`relative grid h-7 w-7 place-items-center rounded-md transition-colors ${open ? 'bg-ink text-white ring-2 ring-ink ring-offset-1' : 'bg-ink text-white hover:bg-primary-hover'}`}>
         <FileSearch aria-hidden size={15} strokeWidth={2.25} />
       </span>
-      {!open && count > 0 && (
+      {enabled && !open && count > 0 && (
         <span aria-hidden className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-danger px-1 text-[10px] font-semibold text-white">
           {count}
         </span>
@@ -284,21 +217,14 @@ function BrowserChrome() {
         <div className="flex h-7 min-w-0 flex-1 items-center rounded-full bg-[#e9e9e4] px-3 text-xs text-ink-3">
           <span className="truncate">{inbox ? 'webmail.example.com/inbox' : 'binddesk.marshcolby.example/' + (screen.name === 'app' ? `applications/${screen.id}` : screen.name)}</span>
         </div>
-        <ExtensionIcon
-          open={inbox && capture.panelOpen}
-          count={capture.docs.length}
-          onClick={() => {
-            if (!inbox) go({ name: 'capture' })
-            setPanel(inbox ? !capture.panelOpen : true)
-          }}
-        />
+        <ExtensionIcon enabled={inbox} open={inbox && capture.panelOpen} count={capture.docs.length} onClick={() => setPanel(!capture.panelOpen)} />
       </div>
     </div>
   )
 }
 
 function Stage() {
-  const { device, screen } = useProto()
+  const { screen } = useProto()
   const setHover = useProto((s) => s.setHoverDecision)
 
   useEffect(() => {
@@ -307,8 +233,7 @@ function Stage() {
 
   const track = (e: React.SyntheticEvent) => {
     const t = e.target as HTMLElement
-    if ('pointerType' in e && (e as React.PointerEvent).pointerType === 'touch') return setHover(null)
-    if (e.type === 'focus' && (!t.matches?.(':focus-visible') || t.matches('input, textarea, select'))) return setHover(null)
+    if (e.type === 'focus' && !t.matches?.(':focus-visible')) return
     const el = t.closest<HTMLElement>('[data-decision]')
     setHover(el?.dataset.decision ?? null)
   }
@@ -321,23 +246,12 @@ function Stage() {
       onPointerLeave={() => setHover(null)}
       onBlurCapture={() => setHover(null)}
     >
-      {device === 'desktop' ? (
-        <div className="flex min-h-0 w-full max-w-[1320px] flex-col overflow-hidden bg-canvas lg:rounded-[16px] lg:border-[10px] lg:border-[#1c1c1b] lg:shadow-[0_20px_50px_rgb(0_0_0/0.18)]">
-          <BrowserChrome />
-          <div className="relative min-h-0 flex-1 overflow-hidden">
-            {screen.name === 'capture' ? <Capture /> : screen.name === 'app' ? <AppDetail key={screen.id} id={screen.id} /> : <AppShell />}
-          </div>
+      <div className="flex min-h-0 w-full max-w-[1320px] flex-col overflow-hidden bg-canvas lg:rounded-[16px] lg:border-[10px] lg:border-[#1c1c1b] lg:shadow-[0_20px_50px_rgb(0_0_0/0.18)]">
+        <BrowserChrome />
+        <div className="relative min-h-0 flex-1 overflow-hidden">
+          {screen.name === 'capture' ? <Capture /> : screen.name === 'app' ? <AppDetail key={screen.id} id={screen.id} /> : <AppShell />}
         </div>
-      ) : (
-        <div className="flex w-full items-start justify-center overflow-auto lg:items-center">
-          <div className="flex h-full w-full flex-col overflow-hidden bg-canvas lg:h-[min(800px,100%)] lg:w-[390px] lg:rounded-[44px] lg:border-[12px] lg:border-[#1c1c1b] lg:shadow-[0_20px_50px_rgb(0_0_0/0.18)]">
-            <div className="min-h-0 flex-1 overflow-auto">
-              <MobileGlance />
-            </div>
-          </div>
-        </div>
-      )}
-      <DecisionTip />
+      </div>
     </main>
   )
 }

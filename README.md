@@ -16,7 +16,7 @@ Open http://localhost:5173/ajaia-case-study/ (the `.claude/launch.json` config u
 
 ## Deploy
 
-Every push to `main` runs `.github/workflows/deploy.yml`, which builds and publishes `dist/` to GitHub Pages. Pages source must be set to "GitHub Actions" (already done for this repo). Routing uses `HashRouter`, so deep links look like `/#/prototype?scenario=A`.
+Deploys are manual. Pushing to `main` does not publish. Run `gh workflow run deploy.yml` (or use the Actions tab) to build and publish `dist/` to GitHub Pages. Pages source must be set to "GitHub Actions" (already done for this repo). Routing uses `HashRouter`, so deep links look like `/#/prototype?scenario=A`.
 
 ## Adding the video
 

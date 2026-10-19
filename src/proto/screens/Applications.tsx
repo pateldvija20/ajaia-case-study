@@ -1,11 +1,10 @@
 import { useRef } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { useProto, type RangeId } from '../store'
-import { displayStatus, fmtDay, inRange } from '../logic'
+import { fmtDay, inRange } from '../logic'
 import { gsap, useGSAP, useIndicator, withMotion } from '../motion'
-import { StatusBadge } from '../components/StatusBadge'
 import { Counter } from '../components/ui'
-import { InlineLink, SubRow, TableHead } from './Home'
+import { byStatusThenAge, StatusTable } from './Home'
 import type { AppsTab } from '../types'
 
 function rangeDays(r: RangeId, day: number): [number, number] {
@@ -24,8 +23,6 @@ export function Applications() {
   const { subs, day, range, screen, epoch } = useProto()
   const setRange = useProto((s) => s.setRange)
   const go = useProto((s) => s.go)
-  const openApp = useProto((s) => s.openApp)
-  const notInPrototype = useProto((s) => s.notInPrototype)
   const tab = screen.name === 'applications' ? screen.tab : 'open'
   const root = useRef<HTMLDivElement>(null)
   const tabsRef = useRef<HTMLDivElement>(null)
@@ -37,7 +34,7 @@ export function Applications() {
   const stillOpen = started.filter((s) => s.status !== 'bound')
 
   const lists: Record<AppsTab, typeof subs> = {
-    open: subs.filter((s) => ['mismatch', 'missing', 'waiting'].includes(s.status)).sort((a, b) => a.receivedDay - b.receivedDay),
+    open: subs.filter((s) => ['mismatch', 'missing', 'waiting'].includes(s.status)).sort(byStatusThenAge(day)),
     review: subs.filter((s) => s.status === 'ready'),
     closed: subs.filter((s) => s.status === 'bound' && inRange(s.boundDay, r)).sort((a, b) => (b.boundDay ?? 0) - (a.boundDay ?? 0)),
   }
@@ -56,7 +53,7 @@ export function Applications() {
         first.current = false
         return
       }
-      withMotion(() => void gsap.from('[data-list] > *', { opacity: 0, y: 4, duration: 0.25, stagger: 0.03, ease: 'power3.out', delay: 0.06 }))
+      withMotion(() => void gsap.from('[data-list] [role="row"]', { opacity: 0, y: 4, duration: 0.25, stagger: 0.03, ease: 'power3.out', delay: 0.06 }))
     },
     { scope: root, revertOnUpdate: true, dependencies: [tab, range] },
   )
@@ -65,8 +62,8 @@ export function Applications() {
     <div ref={root} className="mx-auto w-full max-w-[1100px] px-4 pb-10 pt-6 md:px-8">
       <header data-enter className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-[34px] leading-[40px] tracking-[-0.01em]">Applications</h1>
-          <p className="text-sm text-ink-3">Every application, open and closed</p>
+          <h1 className="font-display text-[32px] leading-10 tracking-[-0.01em]">All applications</h1>
+          <p className="mt-0.5 text-sm text-ink-2">Everything received, from the first document to the bound policy</p>
         </div>
         <label className="relative inline-flex h-9 items-center rounded-full border border-line-strong bg-surface pl-3 text-sm transition-colors focus-within:border-ink hover:border-ink-3">
           <span className="text-ink-3">Date range</span>
@@ -117,41 +114,13 @@ export function Applications() {
           </button>
         ))}
       </div>
-      <p className="mt-2 text-xs text-ink-3">
-        {tab === 'open' && 'Waiting on you or on a broker.'}
-        {tab === 'review' && 'Every check passed. These need your final approval to bind.'}
-        {tab === 'closed' && 'Policies bound in the selected date range.'}
-      </p>
-
-      <div role="table" aria-label={`${tab} applications`} data-list className="mt-3 overflow-hidden rounded-panel border border-line bg-surface shadow-card">
-        {tab !== 'closed' && <TableHead />}
-        {tab !== 'closed' && lists[tab].map((s) => <SubRow key={s.id} sub={s} showStatus />)}
-        {tab === 'closed' &&
-          lists.closed.map((s) => (
-            <div
-              key={s.id}
-              role="row"
-              className="grid items-start gap-x-5 gap-y-1 border-t border-line bg-surface px-5 py-3.5 first:border-t-0 md:grid-cols-[minmax(0,240px)_minmax(0,1fr)_160px_120px]"
-            >
-              <div role="cell">
-                <span className="block text-[15px] font-semibold">{s.client}</span>
-                <span className="block text-xs text-ink-3">
-                  {s.line} · <span className="whitespace-nowrap font-mono">{s.policyNo}</span>
-                </span>
-              </div>
-              <div role="cell" className="text-sm text-ink-2">
-                Bound {s.boundOn}, received {s.received}.{' '}
-                <InlineLink onClick={() => (s.counterDoc || s.id === 'northgate' ? openApp(s.id, 'bind') : notInPrototype())}>View summary</InlineLink>
-              </div>
-              <div role="cell" className="text-sm text-ink-2">
-                {s.broker.name}
-              </div>
-              <div role="cell" className="md:text-right">
-                <StatusBadge status={displayStatus(s, day)} />
-              </div>
-            </div>
-          ))}
-        {!lists[tab].length && <p className="px-5 py-8 text-sm text-ink-3">Nothing in this tab for the selected range.</p>}
+      <div data-list className="mt-4">
+        <StatusTable
+          rows={lists[tab]}
+          label={`${TABS.find((t) => t.id === tab)!.label} applications`}
+          grouped
+          empty={tab === 'closed' ? 'No policies were bound in this date range.' : 'Nothing in this tab.'}
+        />
       </div>
     </div>
   )

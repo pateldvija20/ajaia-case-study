@@ -30,8 +30,6 @@ for (const f of ALL) {
   await shot(`${f}`, `#/prototype?frame=${f}`, { width: 1440, height: tall ? 1240 : 900 })
 }
 if (!only.length || only.includes('F')) {
-  await shot('F-390', '/#/prototype?frame=F', { width: 390, height: 844 }, { fullPage: true })
-  await shot('F-desktop', '/#/prototype?frame=F', { width: 1440, height: 900 })
   await shot('2a-390', '/#/prototype?frame=2a', { width: 390, height: 844 }, { fullPage: true })
 }
 if (!only.length || only.includes('reduced')) {

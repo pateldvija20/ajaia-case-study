@@ -260,10 +260,10 @@ function StatusSection({ sub, states }: { sub: Submission; states: ReturnType<ty
           )
         })}
       </ol>
-      <p data-enter data-decision="next-step" className="mt-4 rounded-card bg-surface px-4 py-3 text-[15px] leading-6 text-ink-2 shadow-card ring-1 ring-line">
-        <span className="mr-1 font-semibold text-ink">Next:</span>
+      <div data-enter data-decision="next-step" className="mt-4 rounded-card bg-surface px-4 py-3 text-[15px] leading-6 text-ink-2 shadow-card ring-1 ring-line">
+        <span className="mb-0.5 block text-xs font-semibold uppercase tracking-[0.08em] text-ink-3">Next step</span>
         <NextStep sub={sub} />
-      </p>
+      </div>
     </section>
   )
 }
