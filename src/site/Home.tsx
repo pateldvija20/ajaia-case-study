@@ -20,7 +20,6 @@ import {
 } from './content'
 import { LoopVideo, posterOf } from './LoopVideo'
 import imgDashboard from './img/2a.jpg'
-import imgBind from './img/6b.jpg'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -59,9 +58,20 @@ export default function Home() {
         gsap.utils.toArray<HTMLElement>('[data-bar]').forEach((el) => {
           gsap.from(el, { scaleX: 0, duration: 0.7, ease: 'power3.out', scrollTrigger: { trigger: el, start: 'top 90%', once: true } })
         })
-        const line = root.current?.querySelector('[data-journey-line]')
-        if (line) gsap.from(line, { scaleX: 0, ease: 'none', scrollTrigger: { trigger: '#journey', start: 'top 75%', end: 'bottom 60%', scrub: 0.3 } })
-        gsap.from('[data-stage]', { opacity: 0, y: 10, duration: 0.4, stagger: 0.06, ease: 'power3.out', scrollTrigger: { trigger: '#journey', start: 'top 75%', once: true } })
+        gsap.from('[data-stage]', { opacity: 0, y: 10, duration: 0.4, stagger: 0.06, ease: 'power3.out', scrollTrigger: { trigger: '#journey', start: 'top 80%', once: true } })
+        // The line draws with scroll; each stage fills as the line reaches it. Slow scrub, eased catch-up.
+        const fills = gsap.utils.toArray<HTMLElement>('[data-stage-fill]')
+        const mm = gsap.matchMedia()
+        mm.add('(min-width: 768px)', () => {
+          const tl = gsap.timeline({ scrollTrigger: { trigger: '#journey', start: 'top 70%', end: 'bottom 45%', scrub: 0.8 } })
+          tl.fromTo('[data-journey-line]', { scaleX: 0 }, { scaleX: 1, ease: 'none', duration: 1 }, 0)
+          fills.forEach((f, i) => tl.fromTo(f, { scale: 0.4, opacity: 0 }, { scale: 1, opacity: 1, ease: 'power2.out', duration: 0.06 }, Math.max(0, i / fills.length - 0.02)))
+        })
+        mm.add('(max-width: 767px)', () => {
+          fills.forEach((f) =>
+            gsap.fromTo(f, { scale: 0.4, opacity: 0 }, { scale: 1, opacity: 1, ease: 'power2.out', scrollTrigger: { trigger: f, start: 'top 75%', end: 'top 60%', scrub: 0.8 } }),
+          )
+        })
       }),
     { scope: root },
   )
@@ -202,12 +212,11 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="mt-20 grid gap-8 md:mt-28 md:grid-cols-2 md:items-start">
-            <div data-reveal className="rounded-panel border border-line bg-surface p-5 md:p-6">
-              <h3 className="font-display text-[26px] leading-8">AI tag</h3>
-              <p className="mt-2 text-md text-ink-2">Marks anything AI changed, with a review state and a &ldquo;Why?&rdquo; link to the source.</p>
-              <ul className="mt-5 space-y-3">
-                <li className="rounded-card border border-line bg-canvas p-3">
+          <div className="mt-20 space-y-10 md:mt-28">
+            <Callout title="AI tag">
+              <p className="text-md text-ink-2">Marks anything AI changed, with a review state and a &ldquo;Why?&rdquo; link to the source.</p>
+              <ul className="mt-6 flex flex-wrap justify-center gap-3 text-left">
+                <li className="rounded-card border border-line bg-surface px-3 py-2.5">
                   <AiTag
                     variant="Document intelligence"
                     did="Compared 9 fields across 2 documents"
@@ -215,7 +224,7 @@ export default function Home() {
                     why={{ evidence: ['Application: client portal', 'Certificate of insurance: email attachment'], confidence: 'Each occurrence: 98%', approval: 'You mark each difference.', audit: ['9 fields compared, 2 differ'] }}
                   />
                 </li>
-                <li className="rounded-card border border-line bg-canvas p-3">
+                <li className="rounded-card border border-line bg-surface px-3 py-2.5">
                   <AiTag
                     variant="Agent"
                     did="Drafted the broker email from your decisions"
@@ -223,7 +232,7 @@ export default function Home() {
                     why={{ evidence: ['Each occurrence: $1,000,000 vs $2,000,000'], approval: 'Sent only after you pressed Send.', audit: ['Draft generated', 'Edited and sent by you'] }}
                   />
                 </li>
-                <li className="rounded-card border border-line bg-canvas p-3">
+                <li className="rounded-card border border-line bg-surface px-3 py-2.5">
                   <AiTag
                     variant="Integration"
                     did="Reads attachments in the open web inbox"
@@ -231,7 +240,7 @@ export default function Home() {
                     why={{ evidence: ['Open web inbox'], approval: 'Read-only. Nothing in the inbox is changed.', audit: ['5 messages scanned'] }}
                   />
                 </li>
-                <li className="rounded-card border border-line bg-canvas p-3">
+                <li className="rounded-card border border-line bg-surface px-3 py-2.5">
                   <AiTag
                     variant="Private environment"
                     did="Documents processed inside the firm's own environment"
@@ -240,10 +249,7 @@ export default function Home() {
                   />
                 </li>
               </ul>
-            </div>
-            <figure data-reveal className="overflow-hidden rounded-panel border border-line bg-surface shadow-card">
-              <img src={imgBind} alt="The approve-and-bind dialog listing what was verified, with a required confirmation checkbox." loading="lazy" className="block w-full" />
-            </figure>
+            </Callout>
           </div>
         </Section>
 
@@ -294,16 +300,20 @@ export default function Home() {
         </Section>
 
         {/* Clarifications */}
-        <Section id="ai" label="Clarifications" title="How I used AI">
-          <p data-reveal className="max-w-2xl text-md text-ink-2">
-            <strong className="font-semibold text-ink">I made the design decisions.</strong> AI helped me carry them out.
-          </p>
-          <div className="mt-8">
-            <PhaseCards items={AI_USE} label="Area" />
-          </div>
+        <Section
+          id="ai"
+          label="Clarifications"
+          title="How I used AI"
+          lede={
+            <>
+              <strong className="font-semibold text-ink">I made the design decisions.</strong> AI helped me carry them out.
+            </>
+          }
+        >
+          <PhaseCards items={AI_USE} label="Area" />
         </Section>
 
-        <Section id="next" label="Next steps" title="Ship the mismatch check first">
+        <Section id="next" label="Next steps" title="Ship the mismatch check first" lede="Start where the evidence is strongest. The next round decides the rest.">
           <PhaseCards items={NEXT_STEPS} label="Step" />
         </Section>
       </main>
@@ -341,7 +351,7 @@ export default function Home() {
 const OUTLINE_BTN =
   'inline-flex h-10 items-center gap-1 rounded-full border border-line-strong bg-transparent px-4 font-medium transition-colors hover:border-ink-3 hover:bg-muted'
 
-function Section({ id, label, title, lede, center = false, children }: { id: string; label: string; title: string; lede?: string; center?: boolean; children: ReactNode }) {
+function Section({ id, label, title, lede, center = false, children }: { id: string; label: string; title: string; lede?: ReactNode; center?: boolean; children: ReactNode }) {
   return (
     <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-16 border-t border-line">
       <div className="mx-auto max-w-[1120px] px-4 py-16 md:px-8 md:py-24">
@@ -358,9 +368,9 @@ function Section({ id, label, title, lede, center = false, children }: { id: str
 
 function Callout({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div data-reveal className="rounded-panel bg-muted px-6 py-10 text-center md:px-12 md:py-14">
+    <div data-reveal className="rounded-panel border border-line-strong px-6 py-8 text-center md:px-12 md:py-9">
       <h3 className="font-display text-[24px] leading-8 md:text-[28px] md:leading-9">{title}</h3>
-      <div className="mx-auto mt-4 max-w-2xl">{children}</div>
+      <div className="mx-auto mt-3 max-w-2xl">{children}</div>
     </div>
   )
 }
@@ -474,7 +484,12 @@ function Journey() {
           const Icon = gap ? CircleAlert : Check
           return (
             <li key={s.stage} data-stage className="relative grid grid-cols-[32px_1fr] gap-3 md:block">
-              <span className="relative z-10 grid h-8 w-8 place-items-center rounded-full border border-ink bg-canvas font-mono text-xs">{i + 1}</span>
+              <span className="relative z-10 grid h-8 w-8 place-items-center overflow-hidden rounded-full border border-ink bg-canvas font-mono text-xs">
+                {i + 1}
+                <span aria-hidden data-stage-fill className="absolute inset-0 grid place-items-center rounded-full bg-ink text-white">
+                  {i + 1}
+                </span>
+              </span>
               <div className="md:mt-4">
                 <h4 className="text-md font-semibold">{s.stage}</h4>
                 <p className="mt-1 text-sm text-ink-2">{s.happens}</p>
@@ -554,7 +569,7 @@ const FIELDS: [keyof Scenario, string][] = [
 function ScenarioCard({ s, flip }: { s: Scenario; flip: boolean }) {
   const name = `scenario-${s.id.toLowerCase()}`
   return (
-    <article aria-labelledby={`sc-${s.id}`} className="grid gap-6 md:grid-cols-[1fr_1.45fr] md:items-center md:gap-12">
+    <article aria-labelledby={`sc-${s.id}`} className={`grid gap-6 md:items-center md:gap-12 ${flip ? 'md:grid-cols-[1.45fr_1fr]' : 'md:grid-cols-[1fr_1.45fr]'}`}>
       <div data-reveal className={flip ? 'md:order-2' : ''}>
         <h3 id={`sc-${s.id}`} className="font-display text-[28px] leading-9">
           {s.title}
@@ -581,7 +596,7 @@ function ScenarioCard({ s, flip }: { s: Scenario; flip: boolean }) {
         )}
       </div>
       <div data-reveal className={flip ? 'md:order-1' : ''}>
-        <LoopVideo name={name} poster={posterOf(name)} label={s.videoLabel} />
+        <LoopVideo name={name} poster={posterOf(name)} label={s.videoLabel} ambient />
       </div>
     </article>
   )
