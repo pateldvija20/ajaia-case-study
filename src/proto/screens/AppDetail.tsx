@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNo
 import {
   ArrowLeft,
   Check,
+  Upload,
   ChevronDown,
   ClipboardList,
   FileSearch,
@@ -503,6 +504,7 @@ function DocsTable({ sub }: { sub: Submission }) {
 function ChecklistSection({ sub }: { sub: Submission }) {
   const { suggestions } = useProto()
   const suggest = useProto((s) => s.suggest)
+  const toast = useProto((s) => s.toast)
   const items = getChecklist(sub)
   const suggested = items.filter((c) => c.suggestion)
   const handled = suggested.filter((c) => suggestions[decisionKey(sub.id, c.id)]).length
@@ -510,6 +512,15 @@ function ChecklistSection({ sub }: { sub: Submission }) {
   return (
     <section aria-label="Checklist">
       <div data-decision="checklist" className="rounded-card border border-line bg-surface">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3">
+          <div>
+            <h3 className="text-sm font-semibold">Bindwise checklist</h3>
+            <p className="text-xs text-ink-3">Every item needed before this policy can bind</p>
+          </div>
+          <Button variant="secondary" onClick={() => toast(`Upload would attach a document to ${sub.client}. Not part of this prototype.`)}>
+            <Upload aria-hidden size={13} /> Upload document
+          </Button>
+        </div>
         <ul className="grid divide-y divide-line md:grid-cols-2 md:divide-y-0 md:[&>li]:border-b md:[&>li]:border-line md:[&>li:nth-child(odd)]:border-r">
           {items.map((c) => {
             const s = suggestions[decisionKey(sub.id, c.id)]
