@@ -215,7 +215,7 @@ function BrowserChrome() {
           <RotateCw size={14} className="mt-px" />
         </span>
         <div className="flex h-7 min-w-0 flex-1 items-center rounded-full bg-[#e9e9e4] px-3 text-xs text-ink-3">
-          <span className="truncate">{inbox ? 'webmail.example.com/inbox' : 'binddesk.marshcolby.example/' + (screen.name === 'app' ? `applications/${screen.id}` : screen.name)}</span>
+          <span className="truncate">{inbox ? 'webmail.example.com/inbox' : 'binddesk.app.example/' + (screen.name === 'app' ? `applications/${screen.id}` : screen.name)}</span>
         </div>
         <ExtensionIcon enabled={inbox} open={inbox && capture.panelOpen} count={capture.docs.length} onClick={() => setPanel(!capture.panelOpen)} />
       </div>
@@ -271,7 +271,6 @@ function AppShell() {
           <img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" className="h-7 w-7" />
           <div>
             <p className="text-[15px] font-semibold leading-5">Bind Desk</p>
-            <p className="text-xs text-ink-3">Marsh &amp; Colby</p>
           </div>
         </div>
         <nav aria-label="Main" className="flex flex-col gap-0.5 px-2">

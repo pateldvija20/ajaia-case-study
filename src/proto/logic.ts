@@ -71,7 +71,7 @@ export function buildRequestDraft(sub: Submission, decisions: Record<string, Dec
       ``,
       `Thanks,`,
       `${USER.name}`,
-      `${USER.role}, Marsh & Colby`,
+      `${USER.role}`,
     ].join('\n')
   }
   const real = (sub.diffs ?? []).filter((d) => decisions[decisionKey(sub.id, d.id)] === 'real')
@@ -90,7 +90,7 @@ export function buildRequestDraft(sub: Submission, decisions: Record<string, Dec
     ``,
     `Thanks,`,
     `${USER.name}`,
-    `${USER.role}, Marsh & Colby`,
+    `${USER.role}`,
   ].join('\n')
 }
 

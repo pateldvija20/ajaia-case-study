@@ -175,6 +175,19 @@ function CapturePanel({ onClose }: { onClose: () => void }) {
             <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3">Bind Desk · Capture</p>
             <h2 className="mt-0.5 font-display text-[22px] leading-7">{docs.length} documents found in this inbox</h2>
             <p className="mt-1 text-sm text-ink-2">Check each match. Click a document to preview it or change its application.</p>
+            <div data-decision="ai-tag" className="mt-3">
+              <AiTag
+                variant="Document intelligence"
+                did="Named each document type and matched it to a submission"
+                review={uncertainOpen ? 'Needs your review' : 'Confirmed by you'}
+                why={{
+                  evidence: docs.map((d) => `${d.file} → ${d.type}`),
+                  confidence: docs.map((d) => `${Math.round(d.confidence * 100)}%`).join(' · '),
+                  approval: 'Matches under 80% confidence wait for you to confirm or change the application.',
+                  audit: docs.map((d) => `${d.file}: ${d.state}`),
+                }}
+              />
+            </div>
           </div>
           <button onClick={onClose} aria-label="Close panel" className="grid h-8 w-8 place-items-center rounded-full hover:bg-muted">
             <X aria-hidden size={16} />
@@ -182,20 +195,6 @@ function CapturePanel({ onClose }: { onClose: () => void }) {
         </header>
 
         <div className="min-h-0 flex-1 overflow-auto px-5 py-4">
-          <div data-decision="ai-tag" className="mb-3 space-y-1.5">
-            <AiTag
-              variant="Document intelligence"
-              did="Named each document type and matched it to a submission"
-              review={uncertainOpen ? 'Needs your review' : 'Confirmed by you'}
-              why={{
-                evidence: docs.map((d) => `${d.file} → ${d.type}`),
-                confidence: docs.map((d) => `${Math.round(d.confidence * 100)}%`).join(' · '),
-                approval: 'Matches under 80% confidence wait for you to confirm or change the application.',
-                audit: docs.map((d) => `${d.file}: ${d.state}`),
-              }}
-            />
-          </div>
-
           <ul className="space-y-2">
             {docs.map((d, i) => (
               <DocRow key={d.id} doc={d} resolved={i < resolved} subs={subs} onConfirm={() => confirmMatch(d.id)} previewing={capture.previewId === d.id} onPreview={() => setPreview(capture.previewId === d.id ? null : d.id)} />
@@ -276,22 +275,19 @@ function DocRow({
     <li
       data-doc-row={doc.id}
       data-decision={uncertain ? 'low-confidence' : undefined}
-      className={`relative rounded-card border p-3 transition-colors ${previewing ? 'border-ink ring-1 ring-ink' : uncertain && shown ? 'border-warning-line' : 'border-line hover:border-line-strong'} ${uncertain && shown ? 'bg-[#fffaf2]' : 'bg-surface'}`}
+      className={`relative rounded-card border px-4 py-3.5 transition-colors ${previewing ? 'border-ink ring-1 ring-ink' : uncertain && shown ? 'border-warning-line' : 'border-line hover:border-line-strong'} ${uncertain && shown ? 'bg-[#fffaf2]' : 'bg-surface'}`}
     >
       <span ref={ring} aria-hidden className="pointer-events-none absolute -inset-[3px] rounded-[12px] border-2 border-ink opacity-0" />
       <div className="flex items-start gap-3">
         <FileText aria-hidden size={18} className="mt-0.5 shrink-0 text-ink-3" />
         <div className="min-w-0 flex-1">
-          {uncertain && shown && (
-            <span className="float-right ml-2 inline-flex h-5 items-center rounded-full border border-warning-line bg-warning-bg px-2 text-[11px] font-medium text-warning">Needs review</span>
-          )}
           <button onClick={onPreview} aria-pressed={previewing} className="block w-full text-left" title="Preview this document">
             <span className="block truncate font-mono text-[13px] text-ink underline decoration-transparent underline-offset-2 hover:decoration-ink-3">{doc.file}</span>
-            <span className="block text-xs text-ink-3">
+            <span className="mt-0.5 block text-xs text-ink-3">
               <span className="font-medium text-ink-2">{doc.type}</span> · {doc.source} · {doc.from}
             </span>
           </button>
-          <div className="mt-2" aria-live="polite">
+          <div className="mt-3" aria-live="polite">
             {!shown ? (
               <span key="matching" ref={matchChip} className="inline-flex h-6 items-center gap-1.5 rounded-full bg-muted px-2 text-xs text-ink-3">
                 <span ref={matchTxt} className="inline-flex items-center gap-1.5">
@@ -316,13 +312,16 @@ function DocRow({
               </span>
             )}
           </div>
-          {shown && !expanded && (
-            <button onClick={() => setPicking(true)} className="mt-1.5 text-xs text-ink-3 underline underline-offset-2 hover:text-ink">
-              {uncertain ? 'Review match' : 'Change application'}
+          {shown && !expanded && uncertain && (
+            <button
+              onClick={() => setPicking(true)}
+              className="mt-3 inline-flex h-6 items-center rounded-full border border-warning-line bg-warning-bg px-2.5 text-xs font-medium text-warning transition-colors hover:border-warning"
+            >
+              Needs review
             </button>
           )}
           {shown && expanded && (
-            <div className="mt-2.5">
+            <div className="mt-3 border-t border-line pt-3">
               <p className="text-xs text-ink-2">
                 {uncertain
                   ? `Only ${Math.round(doc.confidence * 100)}% sure. "HL" could be Harborview Freight Co. or Harbor Line Logistics.`
