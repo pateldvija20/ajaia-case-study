@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
+import { forwardRef, type SelectHTMLAttributes, useEffect, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { AiTag } from './AiTag'
 import { tweenNumber } from '../motion'
@@ -142,4 +142,19 @@ export function useFocusTrap(active: boolean, onEscape?: () => void) {
 
 export function Kbd({ children }: { children: ReactNode }) {
   return <kbd className="rounded border border-line-strong bg-surface px-1 font-mono text-[11px] text-ink-2">{children}</kbd>
+}
+
+/** Pill select with its own chevron, inset from the edge. */
+export function Select({ className = '', wrapClassName = '', children, ...rest }: SelectHTMLAttributes<HTMLSelectElement> & { wrapClassName?: string }) {
+  return (
+    <span className={`relative inline-flex ${wrapClassName}`}>
+      <select
+        {...rest}
+        className={`h-8 w-full cursor-pointer appearance-none truncate rounded-full border border-line-strong bg-surface pl-3.5 pr-9 text-sm text-ink transition-colors hover:border-ink-3 focus:border-ink ${className}`}
+      >
+        {children}
+      </select>
+      <ChevronDown aria-hidden size={14} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-3" />
+    </span>
+  )
 }

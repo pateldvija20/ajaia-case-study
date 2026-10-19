@@ -26,6 +26,8 @@ export interface Data {
   /** which design decision the left panel shows while hovering */
   hoverDecision: string | null
   decisions: Record<string, Decision>
+  /** correct value the user approved for a real mismatch, keyed sub:diff */
+  corrections: Record<string, string>
   suggestions: Record<string, 'accepted' | 'dismissed'>
   drafts: Record<string, string>
   editing: string | null
@@ -46,6 +48,8 @@ interface Toast { id: number; text: string }
 interface Actions {
   go: (s: Screen) => void
   decide: (subId: string, diffId: string, d: Decision) => void
+  undecide: (subId: string, diffId: string) => void
+  approveCorrection: (subId: string, diffId: string, value: string) => void
   suggest: (subId: string, itemId: string, v: 'accepted' | 'dismissed') => void
   setDraft: (subId: string, text: string) => void
   setEditing: (subId: string | null) => void
@@ -103,6 +107,7 @@ export function seed(): Data {
     focusDiff: {},
     hoverDecision: null,
     decisions: {},
+    corrections: {},
     suggestions: {},
     drafts: {},
     editing: null,
@@ -137,7 +142,7 @@ const tDecide = (subId: string, diffId: string, v: Decision): T => (d) => {
 
 const tSendRequest = (subId: string): T => (d) => {
   const s = sub(d, subId)
-  const text = d.drafts[subId] ?? buildRequestDraft(s, d.decisions, d.suggestions)
+  const text = d.drafts[subId] ?? buildRequestDraft(s, d.decisions, d.suggestions, d.corrections)
   let askedFor = 'the loss runs (5 years)'
   let reason = 'Asked broker for loss runs (5 years)'
   if (s.status === 'mismatch') {
@@ -273,6 +278,14 @@ export const useProto = create<ProtoState>((set, get) => {
 
     go: (screen) => apply(go(screen)),
     decide: (subId, diffId, v) => apply(tDecide(subId, diffId, v)),
+    undecide: (subId, diffId) =>
+      apply((d) => {
+        const decisions = { ...d.decisions }
+        delete decisions[decisionKey(subId, diffId)]
+        return { ...d, decisions }
+      }),
+    approveCorrection: (subId, diffId, value) =>
+      apply((d) => ({ ...tDecide(subId, diffId, 'real')(d), corrections: { ...d.corrections, [decisionKey(subId, diffId)]: value } })),
     suggest: (subId, itemId, v) =>
       apply((d) => {
         const drafts = { ...d.drafts }

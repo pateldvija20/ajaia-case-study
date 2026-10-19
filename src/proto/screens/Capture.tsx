@@ -4,7 +4,7 @@ import { useProto } from '../store'
 import { INBOX } from '../mockData'
 import { gsap, prefersReduced, useGSAP, withMotion } from '../motion'
 import { AiTag } from '../components/AiTag'
-import { Button, ProtoFooter } from '../components/ui'
+import { Button, ProtoFooter, Select } from '../components/ui'
 import { DocPreview, GenericPage } from './AppDetail'
 import type { CaptureDoc } from '../types'
 
@@ -323,12 +323,7 @@ function DocRow({
                 <label className="sr-only" htmlFor={`app-${doc.id}`}>
                   Application for {doc.file}
                 </label>
-                <select
-                  id={`app-${doc.id}`}
-                  value={choice}
-                  onChange={(e) => setChoice(e.target.value)}
-                  className="h-8 min-w-0 flex-1 rounded-full border border-line-strong bg-surface pl-3 pr-7 text-sm hover:border-ink-3"
-                >
+                <Select id={`app-${doc.id}`} value={choice} onChange={(e) => setChoice(e.target.value)} wrapClassName="min-w-0 flex-1">
                   {subs
                     .filter((s) => s.status !== 'bound')
                     .map((s) => (
@@ -337,7 +332,7 @@ function DocRow({
                         {doc.candidates?.includes(s.id) ? ' (suggested)' : ''}
                       </option>
                     ))}
-                </select>
+                </Select>
                 <Button
                   variant="primary"
                   onClick={() => {

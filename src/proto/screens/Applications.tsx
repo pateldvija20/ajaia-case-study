@@ -150,13 +150,13 @@ export function Applications({ week = false }: { week?: boolean }) {
             <select
               value={range}
               onChange={(e) => setRange(e.target.value as RangeId)}
-              className="h-full cursor-pointer appearance-none bg-transparent pl-2 pr-8 font-medium text-ink outline-none"
+              className="h-full cursor-pointer appearance-none bg-transparent pl-2 pr-9 font-medium text-ink outline-none"
             >
               <option value="this">This week · 13 – 17 Apr</option>
               <option value="last">Last week · 6 – 10 Apr</option>
               <option value="30">Last 30 days · to {fmtDay(day)}</option>
             </select>
-            <ChevronDown aria-hidden size={14} className="pointer-events-none absolute right-3 text-ink-3" />
+            <ChevronDown aria-hidden size={14} className="pointer-events-none absolute right-3.5 text-ink-3" />
           </label>
         )}
       </header>
@@ -221,12 +221,12 @@ export function Applications({ week = false }: { week?: boolean }) {
             <select
               value={homeSort}
               onChange={(e) => setSort(e.target.value as 'oldest' | 'newest')}
-              className="h-full cursor-pointer appearance-none bg-transparent pl-2 pr-8 font-medium text-ink outline-none"
+              className="h-full cursor-pointer appearance-none bg-transparent pl-2 pr-9 font-medium text-ink outline-none"
             >
               <option value="oldest">Oldest first</option>
               <option value="newest">Newest first</option>
             </select>
-            <ChevronDown aria-hidden size={14} className="pointer-events-none absolute right-3 text-ink-3" />
+            <ChevronDown aria-hidden size={14} className="pointer-events-none absolute right-3.5 text-ink-3" />
           </label>
         )}
       </div>

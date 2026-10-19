@@ -52,7 +52,7 @@ export function inRange(day: number | undefined, range: [number, number]) {
 
 export const decisionKey = (subId: string, diffId: string) => `${subId}:${diffId}`
 
-export function buildRequestDraft(sub: Submission, decisions: Record<string, Decision>, accepted: Record<string, string>) {
+export function buildRequestDraft(sub: Submission, decisions: Record<string, Decision>, accepted: Record<string, string>, corrections: Record<string, string> = {}) {
   const first = sub.broker.name.split(' ')[0]
   if (sub.status === 'missing') {
     const context = sub.checklist
@@ -76,7 +76,11 @@ export function buildRequestDraft(sub: Submission, decisions: Record<string, Dec
   }
   const real = (sub.diffs ?? []).filter((d) => decisions[decisionKey(sub.id, d.id)] === 'real')
   const lines = real.map(
-    (d) => `– ${d.field}: the ${sub.counterDoc?.kind.toLowerCase()} shows ${d.right}; the application requests ${d.left}.`,
+    (d) => {
+      const fix = corrections[decisionKey(sub.id, d.id)]
+      if (!fix) return `– ${d.field}: the ${sub.counterDoc?.kind.toLowerCase()} shows ${d.right}; the application requests ${d.left}.`
+      return `– ${d.field}: the ${sub.counterDoc?.kind.toLowerCase()} shows ${d.right}; it should be ${fix}${fix === d.left ? ', as on the application' : ''}.`
+    },
   )
   return [
     `To: ${sub.broker.name} <${sub.broker.email}>`,
@@ -85,7 +89,7 @@ export function buildRequestDraft(sub: Submission, decisions: Record<string, Dec
     `Hi ${first},`,
     `The ${sub.counterDoc?.kind.toLowerCase()} you sent for ${sub.client} does not match the application:`,
     ...lines,
-    `Could you confirm which is correct and send a corrected certificate if needed?`,
+    real.every((d) => corrections[decisionKey(sub.id, d.id)]) ? `Could you send a corrected certificate with ${real.length > 1 ? 'these values' : 'this value'}?` : `Could you confirm which is correct and send a corrected certificate if needed?`,
     `We can bind as soon as this is settled. Effective date is ${sub.effective}.`,
     ``,
     `Thanks,`,

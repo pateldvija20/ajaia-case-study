@@ -70,6 +70,7 @@ await strip('capture-entrance', '#/prototype', async (p) => { await p.getByRole(
 await strip('apps-tab', '#/prototype?frame=2b', (p) => p.getByRole('tab', { name: /Closed/ }).click(), [40, 120, 220, 450], { x: 540, y: 260, width: 520, height: 120 })
 await strip('decide-draft', '#/prototype?frame=3a', async (p) => {
   await p.getByRole('radio', { name: 'Real mismatch' }).first().click()
+  await p.getByRole('button', { name: 'Approve' }).first().click()
   await p.getByRole('radio', { name: 'Acceptable' }).nth(1).click()
 }, [100, 300, 700, 1100], full)
 await strip('highlight-to-top', '#/prototype?frame=3a', (p) => p.locator('[data-hl="right-ins"]').click(), [60, 200, 450, 900], { x: 1060, y: 140, width: 340, height: 520 })

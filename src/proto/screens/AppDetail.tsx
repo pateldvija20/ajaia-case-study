@@ -23,7 +23,7 @@ import { USER } from '../mockData'
 import { Flip, gsap, prefersReduced, useGSAP, useIndicator, withMotion } from '../motion'
 import { StatusBadge } from '../components/StatusBadge'
 import { AiTag } from '../components/AiTag'
-import { Button, Counter, ProtoFooter } from '../components/ui'
+import { Button, Counter, ProtoFooter, Select } from '../components/ui'
 import { DrawnCheck, EmailDraft } from '../components/EmailDraft'
 import { BindDialog } from '../components/BindDialog'
 import { InlineLink } from './Home'
@@ -514,7 +514,7 @@ function ChecklistSection({ sub }: { sub: Submission }) {
       <div data-decision="checklist" className="rounded-card border border-line bg-surface">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3">
           <div>
-            <h3 className="text-sm font-semibold">Bindwise checklist</h3>
+            <h3 className="text-sm font-semibold">Policy Binding Checklist</h3>
             <p className="text-xs text-ink-3">Every item needed before this policy can bind</p>
           </div>
           <Button variant="secondary" onClick={() => toast(`Upload would attach a document to ${sub.client}. Not part of this prototype.`)}>
@@ -681,7 +681,6 @@ function DocPaper({
 function Compare({ sub }: { sub: Submission }) {
   const { decisions, epoch, focusDiff } = useProto()
   const wide = useWide()
-  const decide = useProto((s) => s.decide)
   const markReady = useProto((s) => s.markReady)
   const setFocusDiff = useProto((s) => s.setFocusDiff)
   const [active, setActive] = useState<string | null>(null)
@@ -813,25 +812,7 @@ function Compare({ sub }: { sub: Submission }) {
                     <dd className="break-words font-mono">{d.right}</dd>
                   </dl>
                   <p className="mt-1.5 text-xs text-ink-3">{d.note}</p>
-                  <div role="radiogroup" aria-label={`${d.field}: your decision`} className="mt-2.5 grid grid-cols-2 rounded-full border border-line-strong bg-muted p-0.5">
-                    {(['real', 'acceptable'] as const).map((opt) => {
-                      const on = v === opt
-                      return (
-                        <button
-                          key={opt}
-                          role="radio"
-                          aria-checked={on}
-                          onClick={() => decide(sub.id, d.id, opt)}
-                          className={`inline-flex h-7 items-center justify-center gap-1 rounded-full px-2 text-xs font-medium transition-colors duration-150 ${
-                            on ? (opt === 'real' ? 'bg-danger text-white shadow-card' : 'bg-surface text-ink shadow-card ring-1 ring-line-strong') : 'text-ink-2 hover:bg-surface/70 hover:text-ink'
-                          }`}
-                        >
-                          {opt === 'real' ? <X aria-hidden size={12} strokeWidth={2.5} /> : <Check aria-hidden size={12} strokeWidth={2.5} />}
-                          {opt === 'real' ? 'Real mismatch' : 'Acceptable'}
-                        </button>
-                      )
-                    })}
-                  </div>
+                  <DiffDecision sub={sub} diff={d} value={v} />
                 </li>
               )
             })}
@@ -900,6 +881,129 @@ export function GenericPage({ title, name, meta }: { title: string; name: string
       </div>
       <p className="border-t border-line px-5 py-2.5 text-xs text-ink-3">Preview of a fictional document.</p>
     </article>
+  )
+}
+
+/* ------------------------------ Difference decision ------------------------------ */
+
+/** Sliding Real mismatch / Acceptable toggle, then Resolved or a correction to approve. */
+function DiffDecision({ sub, diff, value }: { sub: Submission; diff: NonNullable<Submission['diffs']>[number]; value?: Decision }) {
+  const key = decisionKey(sub.id, diff.id)
+  const approved = useProto((s) => s.corrections[key])
+  const decide = useProto((s) => s.decide)
+  const undecide = useProto((s) => s.undecide)
+  const approve = useProto((s) => s.approveCorrection)
+  const [choice, setChoice] = useState<Decision | undefined>(value)
+  const [editing, setEditing] = useState(false)
+  const [text, setText] = useState('')
+  const pill = useRef<HTMLSpanElement>(null)
+  const panel = useRef<HTMLDivElement>(null)
+  const first = useRef(true)
+  useEffect(() => setChoice(value), [value])
+
+  useLayoutEffect(() => {
+    if (!pill.current) return
+    const x = choice === 'acceptable' ? 100 : 0
+    if (first.current || prefersReduced()) gsap.set(pill.current, { xPercent: x, opacity: choice ? 1 : 0 })
+    else gsap.to(pill.current, { xPercent: x, opacity: choice ? 1 : 0, duration: 0.3, ease: 'back.out(1.1)' })
+    first.current = false
+  }, [choice])
+  useLayoutEffect(() => {
+    if (panel.current && !prefersReduced()) gsap.fromTo(panel.current, { opacity: 0, y: -4 }, { opacity: 1, y: 0, duration: 0.25, ease: 'power3.out', delay: 0.08 })
+  }, [choice, editing])
+
+  const pick = (opt: Decision) => {
+    setChoice(opt)
+    setEditing(false)
+    if (opt === 'acceptable') decide(sub.id, diff.id, 'acceptable')
+    else if (value === 'acceptable') undecide(sub.id, diff.id)
+  }
+  const showForm = choice === 'real' && (!approved || value !== 'real' || editing)
+
+  return (
+    <div className="mt-2.5">
+      <div role="radiogroup" aria-label={`${diff.field}: your decision`} className="relative grid grid-cols-2 rounded-full border border-line-strong bg-muted p-0.5">
+        <span
+          ref={pill}
+          aria-hidden
+          className={`pointer-events-none absolute bottom-0.5 left-0.5 top-0.5 w-[calc(50%-2px)] rounded-full shadow-card transition-colors duration-200 ${
+            choice === 'real' ? 'bg-danger' : 'bg-surface ring-1 ring-line-strong'
+          }`}
+        />
+        {(['real', 'acceptable'] as const).map((opt) => {
+          const on = choice === opt
+          return (
+            <button
+              key={opt}
+              role="radio"
+              aria-checked={on}
+              onClick={() => pick(opt)}
+              className={`relative z-10 inline-flex h-7 items-center justify-center gap-1 rounded-full px-2 text-xs font-medium transition-colors duration-200 ${
+                on ? (opt === 'real' ? 'text-white' : 'text-ink') : 'text-ink-2 hover:text-ink'
+              }`}
+            >
+              {opt === 'real' ? <X aria-hidden size={12} strokeWidth={2.5} /> : <Check aria-hidden size={12} strokeWidth={2.5} />}
+              {opt === 'real' ? 'Real mismatch' : 'Acceptable'}
+            </button>
+          )
+        })}
+      </div>
+
+      {choice === 'acceptable' && value === 'acceptable' && (
+        <div ref={panel} className="mt-2.5 flex items-center gap-2 text-sm text-success">
+          <span className="grid h-5 w-5 place-items-center rounded-full bg-success text-white">
+            <Check aria-hidden size={12} strokeWidth={3} />
+          </span>
+          Resolved. The certificate value is accepted.
+        </div>
+      )}
+
+      {showForm && (
+        <div ref={panel} className="mt-2.5">
+          <label htmlFor={`fix-${key}`} className="text-xs font-medium text-ink-2">
+            What is the correct {diff.field.toLowerCase()}?
+          </label>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            <input
+              id={`fix-${key}`}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder={diff.left}
+              className="h-9 min-w-0 flex-1 rounded-full border border-line-strong bg-surface px-3.5 font-mono text-[13px] placeholder:text-ink-3 hover:border-ink-3 focus:border-ink"
+            />
+            <Button
+              variant="primary"
+              onClick={() => {
+                approve(sub.id, diff.id, text.trim() || diff.left)
+                setEditing(false)
+              }}
+            >
+              Approve
+            </Button>
+          </div>
+          <p className="mt-1 text-xs text-ink-3">Leave it blank to use the application's value, {diff.left}.</p>
+        </div>
+      )}
+
+      {choice === 'real' && value === 'real' && approved && !editing && (
+        <div ref={panel} className="mt-2.5 flex flex-wrap items-center justify-between gap-2 rounded-card bg-danger-bg/60 px-3 py-2 text-sm">
+          <span>
+            <span className="text-ink-2">Correct value </span>
+            <span className="font-mono font-semibold text-ink">{approved}</span>
+            <span className="text-ink-3"> · approved by you, goes in the broker email</span>
+          </span>
+          <button
+            onClick={() => {
+              setText(approved)
+              setEditing(true)
+            }}
+            className="text-xs font-medium underline underline-offset-2 hover:text-ink-2"
+          >
+            Change value
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -1033,7 +1137,7 @@ function CallPanel({ sub, onLog }: { sub: Submission; onLog: () => void }) {
 }
 
 function FollowUpSection({ sub }: { sub: Submission }) {
-  const { day, sent, followChoice, drafts, editing, decisions, suggestions } = useProto()
+  const { day, sent, followChoice, drafts, editing, decisions, suggestions, corrections } = useProto()
   const go = useProto((s) => s.go)
   const chooseFollow = useProto((s) => s.chooseFollow)
   const sendFollowUp = useProto((s) => s.sendFollowUp)
@@ -1061,11 +1165,11 @@ function FollowUpSection({ sub }: { sub: Submission }) {
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-line bg-canvas px-4 py-2.5">
         <label className="flex flex-wrap items-center gap-2 text-sm">
           <span className="font-semibold">Follow up after</span>
-          <select value={sub.followUpDays} onChange={(e) => setFollowUpDays(sub.id, Number(e.target.value))} className="h-8 rounded-full border border-line-strong bg-surface pl-3 pr-7 text-sm hover:border-ink-3">
+          <Select value={sub.followUpDays} onChange={(e) => setFollowUpDays(sub.id, Number(e.target.value))} wrapClassName="w-[112px]">
             <option value={1}>1 day</option>
             <option value={2}>2 days</option>
             <option value={3}>3 days</option>
-          </select>
+          </Select>
           <span className="text-ink-3">without a reply from {first}. Set for this policy only.</span>
         </label>
         {waiting && <span className="text-sm text-ink-2">{overdue ? 'Due now' : `Next nudge ${fmtDay(nextPrompt(sub))}`}</span>}
@@ -1090,13 +1194,13 @@ function FollowUpSection({ sub }: { sub: Submission }) {
       {mismatchDraft && (
         <div data-decision="email">
           <EmailDraft
-            text={drafts[sub.id] ?? buildRequestDraft(sub, decisions, {})}
+            text={drafts[sub.id] ?? buildRequestDraft(sub, decisions, {}, corrections)}
             editing={editing === sub.id}
             onEdit={(on) => setEditing(on ? sub.id : null)}
             onChange={(t) => setDraft(sub.id, t)}
             onSend={() => sendRequest(sub.id)}
             sendLabel={`Send to ${first}`}
-            evidence={realDiffs.map((d) => `${d.field}: ${d.right} (certificate) vs ${d.left} (application)`)}
+            evidence={realDiffs.map((d) => `${d.field}: ${d.right} (certificate) vs ${d.left} (application)${corrections[decisionKey(sub.id, d.id)] ? `; you approved ${corrections[decisionKey(sub.id, d.id)]}` : ''}`)}
           />
         </div>
       )}
