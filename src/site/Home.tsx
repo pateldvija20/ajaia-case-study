@@ -428,12 +428,15 @@ export default function Home() {
               </p>
             </AboutCard>
             <AboutCard title="Why this role">
-              <Placeholder>Why this role</Placeholder>
+              <p>
+                I like treating screens as a system and tuning the workflow behind them. Any job can be done a hundred ways, and a well-made screen
+                makes the efficient way the easy one.
+              </p>
             </AboutCard>
             <AboutCard title="Why Ajaia">
               <p>
-                Ajaia builds AI into real workflows with a person approving the decisions that matter. That&rsquo;s the line this design holds.{' '}
-                <Placeholder>One personal reason</Placeholder>
+                Ajaia builds AI into real workflows with a person approving the decisions that matter. That&rsquo;s the line this design holds. As a consultancy, Ajaia
+                takes on a different problem for each client. I want that range, and the chance to try a different AI workflow on each one.
               </p>
             </AboutCard>
             <AboutCard title="Salary expectations">
@@ -542,11 +545,6 @@ function AboutCard({ title, children }: { title: string; children: ReactNode }) 
       <div className="mt-2 text-md text-ink-2">{children}</div>
     </div>
   )
-}
-
-/** A visibly marked gap for the author to fill in. */
-function Placeholder({ children }: { children: ReactNode }) {
-  return <span className="rounded-chip border border-dashed border-line-strong px-1.5 py-0.5 text-sm text-ink-3">[Placeholder: {children}]</span>
 }
 
 function ResponsiveTable({ head, rows }: { head: string[]; rows: ReactNode[][] }) {
