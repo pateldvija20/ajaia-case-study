@@ -36,6 +36,10 @@ export default function Prototype() {
 
   // ?product=1: the product alone, without the demo panel. Used to record the hero video.
   const product = params.get('product') === '1'
+  // Recording only: lets scripts/video.mjs move the demo clock without the demo panel.
+  useEffect(() => {
+    if (product) (window as unknown as { __proto: typeof useProto }).__proto = useProto
+  }, [product])
   return (
     <div className="flex h-dvh flex-col bg-[#e9e9e4] lg:flex-row">
       {!product && <WindowPanel />}
