@@ -4,11 +4,11 @@ import { Counter } from './ui'
 
 const STYLE: Record<DisplayStatus, string> = {
   mismatch: 'bg-danger-bg text-danger border-danger-line',
-  missing: 'bg-info-bg text-info border-info-line',
-  waiting: 'bg-warning-bg text-warning border-warning-line',
-  overdue: 'bg-warning-bg text-warning border-warning',
-  ready: 'bg-success-bg text-success border-success-line',
-  bound: 'bg-muted text-ink-2 border-line-strong',
+  missing: 'bg-caution-bg text-caution border-caution-line',
+  overdue: 'bg-urgent-bg text-urgent border-urgent-line',
+  waiting: 'bg-muted text-ink-2 border-line-strong',
+  ready: 'bg-info-bg text-info border-info-line',
+  bound: 'bg-success-bg text-success border-success-line',
 }
 
 /** Diamond: shape-coded "conflict" mark, distinct from the circle and clock icons. */

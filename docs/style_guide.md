@@ -24,10 +24,15 @@ Written from the 12 reference screens (Etsy Shop Manager, Graphite, Base44, Guml
 | ink / ink-2 / ink-3 | `#191918` / `#454543` / `#6A6A66` | text, three steps; ink-3 is 5.0:1 on canvas |
 | primary | `#1C1C1B` | the one filled button, demo bar |
 | focus | `#2F5BD3` | focus ring only |
-| danger | `#A8261B` on `#FCEBE8` | mismatch, real mismatch |
-| warning | `#8A4B00` on `#FDF0DE` | waiting on broker, needs your review |
-| success | `#1D6A3B` on `#E4F3E8` | ready to bind, confirmed by you |
-| info | `#2B4C9B` on `#EAF0FB` | missing document |
+| danger (red) | `#A8261B` on `#FCEBE8` | Mismatch: a value conflicts and blocks binding |
+| caution (yellow) | `#6B5300` on `#FCF4D3`, solid `#E0B20A` | Missing: a document has not arrived |
+| urgent (orange) | `#A13F0B` on `#FDEADC`, solid `#D4600F` | Overdue: past the follow-up date |
+| muted (gray) | `#454543` on `#F1F1EE` | Waiting: with the broker, nothing to do yet |
+| info (blue) | `#2B4C9B` on `#EAF0FB` | Ready: every check passed, approval left |
+| success (green) | `#1D6A3B` on `#E4F3E8` | Bound, and completed steps |
+| warning (amber) | `#8A4B00` on `#FDF0DE` | AI review states ("Needs your review"), not application status |
+
+Status colors follow common design-system meaning (Carbon, Atlassian): red error, orange serious warning, yellow warning, gray inactive or waiting, blue information, green done.
 
 There is one accent: primary ink. The four status pairs carry meaning and are never decoration. Every status also has a text label and a distinct icon or shape (diamond, dashed circle, clock, phone, check).
 

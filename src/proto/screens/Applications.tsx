@@ -115,18 +115,25 @@ export function Applications({ week = false }: { week?: boolean }) {
   useGSAP(
     () =>
       withMotion(() => {
-        gsap.from('[data-enter]', { opacity: 0, y: 6, duration: 0.35, stagger: 0.035, ease: 'power3.out' })
+        gsap.from('[data-enter]', { opacity: 0, y: 6, duration: 0.35, stagger: 0.035, ease: 'power3.out', clearProps: 'opacity,transform' })
       }),
     { scope: root, revertOnUpdate: true, dependencies: [epoch] },
   )
-  const first = useRef(true)
+  // Only animate rows when the tab or range really changes (not on mount, not on StrictMode re-runs).
+  const prevView = useRef(`${tab}|${range}`)
   useGSAP(
     () => {
-      if (first.current) {
-        first.current = false
-        return
-      }
-      withMotion(() => void gsap.from('[data-list] [role="row"]', { opacity: 0, y: 4, duration: 0.25, stagger: 0.03, ease: 'power3.out', delay: 0.06 }))
+      const view = `${tab}|${range}`
+      if (prevView.current === view) return
+      prevView.current = view
+      withMotion(
+        () =>
+          void gsap.fromTo(
+            '[data-list] [role="row"]',
+            { opacity: 0, y: 4 },
+            { opacity: 1, y: 0, duration: 0.25, stagger: 0.03, ease: 'power3.out', delay: 0.06, clearProps: 'opacity,transform' },
+          ),
+      )
     },
     { scope: root, revertOnUpdate: true, dependencies: [tab, range] },
   )
@@ -165,15 +172,15 @@ export function Applications({ week = false }: { week?: boolean }) {
         <dl data-enter className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-card border border-line bg-line md:grid-cols-4">
           {[
             { label: 'Mismatch', n: counts.mismatch, tone: 'text-danger' },
-            { label: 'Missing', n: counts.missing, tone: 'text-info' },
-            { label: 'Waiting', n: counts.waiting + counts.overdue, tone: 'text-warning', note: counts.overdue ? `${counts.overdue} overdue` : undefined },
-            { label: 'Ready', n: counts.ready, tone: 'text-success' },
+            { label: 'Missing', n: counts.missing, tone: 'text-caution' },
+            { label: 'Waiting', n: counts.waiting + counts.overdue, tone: 'text-ink-2', note: counts.overdue ? `${counts.overdue} overdue` : undefined },
+            { label: 'Ready', n: counts.ready, tone: 'text-info' },
           ].map((b) => (
             <div key={b.label} className="bg-surface px-4 py-3">
               <dt className="text-xs text-ink-3">{b.label}</dt>
               <dd className="mt-0.5 flex items-baseline gap-2">
                 <Counter value={b.n} className={`font-display text-[30px] leading-9 ${b.n ? b.tone : 'text-ink-3'}`} />
-                {b.note && <span className="text-xs text-warning">{b.note}</span>}
+                {b.note && <span className="text-xs font-medium text-urgent">{b.note}</span>}
               </dd>
             </div>
           ))}

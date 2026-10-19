@@ -39,9 +39,9 @@ const STEPS: { id: Step; title: string; icon: typeof Info }[] = [
 
 const STEP_ICON: Record<StepTone, string> = {
   mismatch: 'bg-danger text-white',
-  missing: 'bg-info text-white',
-  overdue: 'bg-warning text-white',
-  waiting: 'border-2 border-warning-line bg-warning-bg text-warning',
+  missing: 'bg-caution-solid text-ink',
+  overdue: 'bg-urgent-solid text-white',
+  waiting: 'border-2 border-line-strong bg-muted text-ink-2',
 }
 
 type StepTone = 'mismatch' | 'missing' | 'waiting' | 'overdue'
@@ -480,10 +480,10 @@ function DocsTable({ sub }: { sub: Submission }) {
       {missing.map((m) => (
         <div key={m.id} role="row" className={`grid items-start gap-1 border-t border-line px-4 py-3 md:gap-4 ${grid}`}>
           <span role="cell" className="flex min-w-0 items-start gap-2.5">
-            <CircleDashed aria-hidden size={16} className="mt-0.5 shrink-0 text-info" />
+            <CircleDashed aria-hidden size={16} className="mt-0.5 shrink-0 text-caution" />
             <span>
               <span className="block text-sm font-medium">{m.label}</span>
-              <span className="mt-0.5 inline-flex h-5 items-center rounded-full border border-info-line bg-info-bg px-2 text-[11px] font-medium text-info">Missing</span>
+              <span className="mt-0.5 inline-flex h-5 items-center rounded-full border border-caution-line bg-caution-bg px-2 text-[11px] font-medium text-caution">Missing</span>
             </span>
           </span>
           <span role="cell" className="text-sm text-ink-3">
@@ -525,20 +525,20 @@ function ChecklistSection({ sub }: { sub: Submission }) {
           {items.map((c) => {
             const s = suggestions[decisionKey(sub.id, c.id)]
             return (
-              <li key={c.id} className={`px-5 py-2.5 ${c.state === 'missing' ? 'bg-info-bg/60' : ''}`}>
+              <li key={c.id} className={`px-5 py-2.5 ${c.state === 'missing' ? 'bg-caution-bg/70' : ''}`}>
                 <div className="flex items-center gap-3">
                   {c.state === 'done' || s === 'accepted' ? (
                     <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-success text-white">
                       <Check aria-hidden size={12} strokeWidth={3} />
                     </span>
                   ) : c.state === 'missing' ? (
-                    <CircleDashed aria-hidden size={20} className="shrink-0 text-info" strokeWidth={2.25} />
+                    <CircleDashed aria-hidden size={20} className="shrink-0 text-caution" strokeWidth={2.25} />
                   ) : (
                     <span aria-hidden className="h-5 w-5 shrink-0 rounded-full border-2 border-line-strong" />
                   )}
                   <span className="flex-1 text-sm font-medium">{c.label}</span>
                   <span className="text-right text-xs text-ink-3">
-                    {c.state === 'missing' ? <span className="font-semibold text-info">Missing</span> : s === 'accepted' ? <span className="font-mono text-[13px] text-ink">{c.suggestion?.value}</span> : s === 'dismissed' ? 'Left blank' : (c.detail ?? 'Empty')}
+                    {c.state === 'missing' ? <span className="font-semibold text-caution">Missing</span> : s === 'accepted' ? <span className="font-mono text-[13px] text-ink">{c.suggestion?.value}</span> : s === 'dismissed' ? 'Left blank' : (c.detail ?? 'Empty')}
                   </span>
                 </div>
                 {c.state === 'missing' && <p className="ml-8 mt-1 text-xs text-ink-2">{c.detail}</p>}
@@ -1249,7 +1249,7 @@ function FollowUpSection({ sub }: { sub: Submission }) {
 
       {overdue ? (
         <>
-          <div className="rounded-panel border border-warning-line bg-surface">
+          <div className="rounded-panel border border-urgent-line bg-surface">
             <p className="border-b border-line px-5 py-3 text-base font-semibold">
               No reply for <Counter value={day - (sub.lastContact ?? day)} /> days. What do you want to do?
             </p>

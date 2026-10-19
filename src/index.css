@@ -28,6 +28,14 @@
   --color-success: #1d6a3b;
   --color-success-bg: #e4f3e8;
   --color-success-line: #a9d8b8;
+  --color-caution: #6b5300;
+  --color-caution-bg: #fcf4d3;
+  --color-caution-line: #e6cd6e;
+  --color-caution-solid: #e0b20a;
+  --color-urgent: #a13f0b;
+  --color-urgent-bg: #fdeadc;
+  --color-urgent-line: #f0b287;
+  --color-urgent-solid: #d4600f;
   --color-info: #2b4c9b;
   --color-info-bg: #eaf0fb;
   --color-info-line: #b8c9ef;

@@ -18,9 +18,9 @@ export function InlineLink({ children, onClick }: { children: ReactNode; onClick
 }
 
 /** Day count, highlighted inside the next-step sentence. */
-function Days({ n, label }: { n: number; label?: string }) {
+function Days({ n, label, overdue = false }: { n: number; label?: string; overdue?: boolean }) {
   const text = n === 0 && label === 'ago' ? 'today' : `${n} day${n === 1 ? '' : 's'}${label ? ` ${label}` : ''}`
-  return <mark className="rounded-[4px] bg-warning-bg px-1 py-px font-semibold text-warning">{text}</mark>
+  return <mark className={`rounded-[4px] px-1 py-px font-semibold ${overdue ? 'bg-urgent-bg text-urgent' : 'bg-muted text-ink'}`}>{text}</mark>
 }
 
 /** The next step for a submission: a sentence, then its link on its own line. */
@@ -50,7 +50,7 @@ export function NextStep({ sub }: { sub: Submission }) {
     case 'overdue':
       msg = (
         <>
-          No reply from {first} for <Days n={day - (sub.lastContact ?? day)} /> on {asked}.
+          No reply from {first} for <Days n={day - (sub.lastContact ?? day)} overdue /> on {asked}.
         </>
       )
       ctas = (
@@ -100,11 +100,11 @@ export function NextStep({ sub }: { sub: Submission }) {
 
 const CELL: Record<DisplayStatus, string> = {
   mismatch: 'bg-danger-bg text-danger',
-  missing: 'bg-info-bg text-info',
-  overdue: 'bg-warning-bg text-warning',
-  waiting: 'bg-[#fdf7ee] text-warning',
-  ready: 'bg-success-bg text-success',
-  bound: 'bg-muted text-ink-2',
+  missing: 'bg-caution-bg text-caution',
+  overdue: 'bg-urgent-bg text-urgent',
+  waiting: 'bg-muted text-ink-2',
+  ready: 'bg-info-bg text-info',
+  bound: 'bg-success-bg text-success',
 }
 
 const GRID_STATUS = 'md:grid-cols-[112px_minmax(0,1.1fr)_minmax(0,0.8fr)_minmax(0,1.3fr)]'
@@ -113,11 +113,11 @@ const GRID_PLAIN = 'md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.8fr)_minmax(0,1.4fr
 /** Status color as a small dot, used beside tabs. */
 export const DOT: Record<DisplayStatus, string> = {
   mismatch: 'bg-danger',
-  missing: 'bg-info',
-  overdue: 'bg-warning',
-  waiting: 'bg-[#d9a65a]',
-  ready: 'bg-success',
-  bound: 'bg-ink-3',
+  missing: 'bg-caution-solid',
+  overdue: 'bg-urgent-solid',
+  waiting: 'bg-ink-3',
+  ready: 'bg-info',
+  bound: 'bg-success',
 }
 
 /** One application as a table row with a color-coded status cell. */
