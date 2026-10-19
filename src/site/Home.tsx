@@ -23,7 +23,16 @@ import imgDashboard from './img/2a.jpg'
 
 gsap.registerPlugin(ScrollTrigger)
 
-const NAV_LINK = 'hidden rounded-full px-3 py-1.5 text-sm text-ink-2 transition-colors hover:bg-muted hover:text-ink sm:inline-flex'
+const NAV = [
+  ['Walkthrough', 'walkthrough'],
+  ['Problem', 'problem'],
+  ['Design', 'design'],
+  ['Why Ajaia', 'ajaia'],
+  ['Questions', 'questions'],
+  ['Next steps', 'next'],
+] as const
+
+const NAV_LINK = 'hidden rounded-full px-3 py-1.5 text-sm text-ink-2 transition-colors hover:bg-muted hover:text-ink lg:inline-flex'
 
 function youtubeId(url: string) {
   return url.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/)?.[1] ?? null
@@ -133,18 +142,11 @@ export default function Home() {
             Ajaia Assessment <span className="hidden font-normal text-ink-3 sm:inline">· Case study</span>
           </button>
           <nav aria-label="Sections" className="flex items-center gap-0.5">
-            <Link to={PROTOTYPE_URL} className={NAV_LINK}>
-              Prototype
-            </Link>
-            <button onClick={() => jump('walkthrough')} className={NAV_LINK}>
-              Walkthrough
-            </button>
-            <a href={AJAIA_URL} target="_blank" rel="noreferrer" className={NAV_LINK}>
-              ajaia.ai
-            </a>
-            <a href={PORTFOLIO_URL} target="_blank" rel="noreferrer" className={NAV_LINK}>
-              Portfolio
-            </a>
+            {NAV.map(([label, id]) => (
+              <button key={id} onClick={() => jump(id)} className={NAV_LINK}>
+                {label}
+              </button>
+            ))}
             <Link
               to={PROTOTYPE_URL}
               className="ml-2 inline-flex h-9 shrink-0 items-center gap-1 rounded-full bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
@@ -421,8 +423,7 @@ export default function Home() {
               Ajaia
             </a>
           </p>
-          {/* The top bar hides these links on phones, so the footer keeps them there. */}
-          <nav aria-label="Footer" className="flex flex-wrap gap-4 sm:hidden">
+          <nav aria-label="Footer" className="flex flex-wrap gap-4">
             <Link to={PROTOTYPE_URL} className="underline hover:text-ink">
               Prototype
             </Link>
