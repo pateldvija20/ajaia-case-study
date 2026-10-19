@@ -1,0 +1,311 @@
+/**
+ * All prototype data lives here. Every name, policy number, limit, email and
+ * phone number is fictional. Edit this file to change what the scenarios show.
+ */
+import type { Broker, CaptureDoc, Submission } from './types'
+
+/** Demo day 0. The clock control advances from here. */
+export const DEMO_START = new Date(2026, 3, 14) // Tue 14 Apr 2026
+export const WEEK_LABEL = 'Week of 13 Apr'
+export const USER = { name: 'Sam Ortiz', role: 'Underwriting assistant', office: 'Springfield' }
+export const DEFAULT_FOLLOW_UP_DAYS = 2
+
+const coastline: Broker = {
+  name: 'Dana Whitfield',
+  firm: 'Coastline Risk Partners',
+  email: 'dana.whitfield@coastline-risk.example',
+  phone: '(555) 014-2231',
+}
+const tidewater: Broker = {
+  name: 'Marcus Bell',
+  firm: 'Tidewater Brokerage',
+  email: 'mbell@tidewater-brokerage.example',
+  phone: '(555) 016-7740',
+}
+const keystone: Broker = {
+  name: 'Priya Natarajan',
+  firm: 'Keystone Commercial',
+  email: 'priya.n@keystone-commercial.example',
+  phone: '(555) 019-3305',
+}
+
+const glFields = (insured: string, occurrence: string) => [
+  { key: 'insured', label: 'Named insured', value: insured },
+  { key: 'address', label: 'Mailing address', value: '88 Wharf Street, New Bedford, MA 02740' },
+  { key: 'period', label: 'Policy period', value: '05/01/2026 – 05/01/2027' },
+  { key: 'occurrence', label: 'Each occurrence', value: occurrence },
+  { key: 'aggregate', label: 'General aggregate', value: '$4,000,000' },
+  { key: 'products', label: 'Products – completed ops', value: '$4,000,000' },
+  { key: 'personal', label: 'Personal & advertising injury', value: '$2,000,000' },
+  { key: 'premises', label: 'Damage to rented premises', value: '$300,000' },
+  { key: 'medical', label: 'Medical expense (any one person)', value: '$10,000' },
+]
+
+export const SUBMISSIONS: Submission[] = [
+  {
+    id: 'harbor',
+    client: 'Harbor Line Logistics',
+    line: 'General liability',
+    policyNo: 'GL-26-118402',
+    effective: '1 May 2026',
+    received: 'Mon 13 Apr',
+    week: 'current',
+    broker: coastline,
+    status: 'mismatch',
+    reason: 'Each occurrence limit differs: certificate $1,000,000, application $2,000,000',
+    checklistCount: 12,
+    application: {
+      title: 'Commercial application',
+      kind: 'Application',
+      source: 'Client portal',
+      received: 'Mon 13 Apr, 09:12',
+      fields: glFields('Harbor Line Logistics LLC', '$2,000,000'),
+    },
+    counterDoc: {
+      title: 'Certificate of insurance',
+      kind: 'Certificate of insurance',
+      source: 'Email attachment · Coastline Risk Partners',
+      received: 'Mon 13 Apr, 16:40',
+      fields: glFields('Harbor Line Logistics, LLC', '$1,000,000'),
+    },
+    diffs: [
+      {
+        id: 'occ',
+        field: 'Each occurrence',
+        leftKey: 'occurrence',
+        rightKey: 'occurrence',
+        left: '$2,000,000',
+        right: '$1,000,000',
+        confidence: 0.98,
+        note: 'Coverage limit. Binding is blocked until this matches what the client requested.',
+      },
+      {
+        id: 'ins',
+        field: 'Named insured',
+        leftKey: 'insured',
+        rightKey: 'insured',
+        left: 'Harbor Line Logistics LLC',
+        right: 'Harbor Line Logistics, LLC',
+        confidence: 0.41,
+        note: 'Punctuation only. Often acceptable, but it is your call.',
+      },
+    ],
+  },
+  {
+    id: 'pinecrest',
+    client: 'Pinecrest Dental Group',
+    line: 'Businessowners',
+    policyNo: 'BOP-26-220913',
+    effective: '28 Apr 2026',
+    received: 'Mon 13 Apr',
+    week: 'current',
+    broker: tidewater,
+    status: 'missing',
+    reason: 'Loss runs (5 years) not received',
+    checklistCount: 12,
+    application: {
+      title: 'Commercial application',
+      kind: 'Application',
+      source: 'Client portal',
+      received: 'Mon 13 Apr, 11:03',
+      fields: [
+        { key: 'insured', label: 'Named insured', value: 'Pinecrest Dental Group PC' },
+        { key: 'address', label: 'Premises', value: '410 Pinecrest Road, Springfield, MA 01104' },
+        { key: 'period', label: 'Policy period', value: '04/28/2026 – 04/28/2027' },
+        { key: 'building', label: 'Building limit', value: '$1,850,000' },
+        { key: 'bpp', label: 'Business personal property', value: '$640,000' },
+        { key: 'prior', label: 'Prior carrier (p. 2)', value: 'Granite Mutual' },
+        { key: 'years', label: 'Years in business (p. 1)', value: '11' },
+      ],
+    },
+    checklist: [
+      { id: 'c1', label: 'Signed application', state: 'done', detail: 'Client portal · 13 Apr' },
+      { id: 'c2', label: 'Statement of values', state: 'done', detail: 'Client portal · 13 Apr' },
+      { id: 'c3', label: 'Building limit matches request', state: 'done', detail: '$1,850,000' },
+      { id: 'c4', label: 'Loss runs (5 years)', state: 'missing', detail: 'Not found in portal, inbox or uploads' },
+      { id: 'c5', label: 'Prior carrier', state: 'empty', suggestion: { value: 'Granite Mutual', from: 'Application, page 2' } },
+      { id: 'c6', label: 'Years in business', state: 'empty', suggestion: { value: '11', from: 'Application, page 1' } },
+      { id: 'c7', label: 'Sprinklered building', state: 'done', detail: 'Yes' },
+      { id: 'c8', label: 'Certificate of insurance', state: 'done', detail: 'Email attachment · 13 Apr' },
+    ],
+  },
+  {
+    id: 'harborview',
+    client: 'Harborview Freight Co.',
+    line: 'Commercial auto',
+    policyNo: 'CA-26-190044',
+    effective: '5 May 2026',
+    received: 'Tue 14 Apr',
+    week: 'current',
+    broker: keystone,
+    status: 'waiting',
+    reason: 'Asked broker for the driver schedule',
+    askedFor: 'the driver schedule',
+    waitingSince: 0,
+    lastContact: 0,
+    checklistCount: 10,
+    application: { title: 'Commercial application', kind: 'Application', source: 'Client portal', received: 'Tue 14 Apr, 08:20', fields: [] },
+  },
+  {
+    id: 'alder',
+    client: 'Alder & Finch Bakery',
+    line: 'Commercial property',
+    policyNo: 'CP-26-301557',
+    effective: '1 May 2026',
+    received: 'Mon 13 Apr',
+    week: 'current',
+    broker: tidewater,
+    status: 'waiting',
+    reason: 'Asked broker for an updated statement of values',
+    askedFor: 'an updated statement of values',
+    waitingSince: -1,
+    lastContact: -1,
+    checklistCount: 11,
+    application: { title: 'Commercial application', kind: 'Application', source: 'Client portal', received: 'Mon 13 Apr, 10:41', fields: [] },
+  },
+  {
+    id: 'northgate',
+    client: 'Northgate Auto Body',
+    line: 'Garage liability',
+    policyNo: 'GA-26-077310',
+    effective: '20 Apr 2026',
+    received: 'Mon 13 Apr',
+    week: 'current',
+    broker: coastline,
+    status: 'ready',
+    reason: 'All 12 checklist items complete · every limit matches the application',
+    checklistCount: 12,
+    application: {
+      title: 'Commercial application',
+      kind: 'Application',
+      source: 'Client portal',
+      received: 'Mon 13 Apr, 14:02',
+      fields: [
+        { key: 'occurrence', label: 'Each occurrence', value: '$1,000,000' },
+        { key: 'aggregate', label: 'General aggregate', value: '$2,000,000' },
+        { key: 'garagekeepers', label: 'Garagekeepers', value: '$250,000' },
+      ],
+    },
+  },
+  {
+    id: 'kestrel',
+    client: 'Kestrel Field Services',
+    line: 'Workers compensation',
+    policyNo: 'WC-26-064218',
+    effective: '15 Apr 2026',
+    received: 'Thu 9 Apr',
+    week: 'older',
+    broker: keystone,
+    status: 'waiting',
+    reason: 'Asked broker for the signed payroll schedule',
+    askedFor: 'the signed payroll schedule',
+    waitingSince: -3,
+    lastContact: -3,
+    checklistCount: 9,
+    application: { title: 'Commercial application', kind: 'Application', source: 'Client portal', received: 'Thu 9 Apr, 15:30', fields: [] },
+  },
+  {
+    id: 'juniper',
+    client: 'Juniper Lane Florist',
+    line: 'Businessowners',
+    policyNo: 'BOP-26-219870',
+    effective: '15 Apr 2026',
+    received: 'Mon 6 Apr',
+    week: 'older',
+    broker: tidewater,
+    status: 'bound',
+    reason: 'Bound after limits confirmed',
+    boundOn: 'Fri 10 Apr',
+    checklistCount: 12,
+    application: { title: 'Commercial application', kind: 'Application', source: 'Client portal', received: 'Mon 6 Apr', fields: [] },
+  },
+  {
+    id: 'ridgeway',
+    client: 'Ridgeway Self Storage',
+    line: 'Commercial property',
+    policyNo: 'CP-26-300912',
+    effective: '12 Apr 2026',
+    received: 'Fri 3 Apr',
+    week: 'older',
+    broker: coastline,
+    status: 'bound',
+    reason: 'Bound after missing loss runs arrived',
+    boundOn: 'Thu 9 Apr',
+    checklistCount: 11,
+    application: { title: 'Commercial application', kind: 'Application', source: 'Client portal', received: 'Fri 3 Apr', fields: [] },
+  },
+]
+
+/** Documents the capture panel "detects" in the webmail view. */
+export const CAPTURE_DOCS: CaptureDoc[] = [
+  {
+    id: 'd1',
+    file: 'COI_HarborLine_2026.pdf',
+    type: 'Certificate of insurance',
+    source: 'Email attachment',
+    from: 'Dana Whitfield',
+    matchId: 'harbor',
+    confidence: 0.97,
+    state: 'matched',
+  },
+  {
+    id: 'd2',
+    file: 'SOV_AlderFinch_rev2.xlsx',
+    type: 'Statement of values',
+    source: 'Email attachment',
+    from: 'Marcus Bell',
+    matchId: 'alder',
+    confidence: 0.95,
+    state: 'matched',
+  },
+  {
+    id: 'd3',
+    file: 'Signed_app_HL.pdf',
+    type: 'Signed application',
+    source: 'Email attachment',
+    from: 'Priya Natarajan',
+    matchId: 'harborview',
+    confidence: 0.58,
+    candidates: ['harborview', 'harbor'],
+    state: 'uncertain',
+  },
+  {
+    id: 'd4',
+    file: 'Driver_schedule_Q2.pdf',
+    type: 'Driver schedule',
+    source: 'Broker portal',
+    from: 'Keystone Commercial portal',
+    matchId: 'harborview',
+    confidence: 0.93,
+    state: 'matched',
+  },
+]
+
+export const FAX_DOC: CaptureDoc = {
+  id: 'd5',
+  file: 'FAX_0414_0932.pdf',
+  type: 'Payroll schedule (signed)',
+  source: 'Fax scan (uploaded)',
+  from: 'Fax line ·· 0932',
+  matchId: 'kestrel',
+  confidence: 0.9,
+  state: 'matched',
+}
+
+/** Fictional webmail inbox shown behind the capture panel. */
+export const INBOX = [
+  { id: 'm1', from: 'Dana Whitfield', subject: 'COI – Harbor Line Logistics renewal', preview: 'Attached is the certificate for Harbor Line. Let me know if…', time: '16:40', attachments: 1, unread: true },
+  { id: 'm2', from: 'Priya Natarajan', subject: 'Docs for HL', preview: 'Signed app attached, sorry for the delay on this one.', time: '15:12', attachments: 1, unread: true },
+  { id: 'm3', from: 'Marcus Bell', subject: 'RE: Alder & Finch – SOV', preview: 'Revised statement of values with the new oven line…', time: '13:55', attachments: 1, unread: false },
+  { id: 'm4', from: 'Owen Restrepo', subject: 'Regional ops sync moved to Thursday', preview: 'Same agenda, new time. Bring the open items list.', time: '11:20', attachments: 0, unread: false },
+  { id: 'm5', from: 'Keystone portal', subject: 'New file shared: Driver_schedule_Q2.pdf', preview: 'Priya Natarajan shared a file with you.', time: '09:02', attachments: 1, unread: false },
+]
+
+/** Evidence lines from the discovery research, used in "Why this design" notes. */
+export const EVIDENCE = {
+  hunting: 'Colin: "I\'m hunting through my inbox half the time." 11 min to locate documents vs 3 min to complete the checklist; 17 of 54 arrived outside the client portal.',
+  carefully: 'Colin: "I just read carefully." Mismatches on 19 of 54 (Colin) and 23 of 61 (Anika) submissions; 14 min on average to the first flag.',
+  waiting: 'Anika: "that can take days waiting on a reply." Flag to broker reply: median 2.1 days, nine submissions over 4 days.',
+  checklistFine: 'Anika: "the checklist itself is fine." Colin completes it in about 3 minutes.',
+  autofill: "Owen's wishlist asks for smart autofill. Weak signal from Anika's wand-wave answer, so it stays secondary and opt-in.",
+}
