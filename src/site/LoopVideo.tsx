@@ -33,7 +33,7 @@ function elect() {
  * Looping, muted product clip recorded from the prototype (scripts/video.mjs). Plays only
  * while it is the most visible clip on screen, pauses on hover and focus, and shows the
  * poster without autoplay under reduced motion. Below the fold it loads nothing until it
- * comes near the viewport. The clip links to the prototype; a separate control plays or pauses.
+ * comes near the viewport. With `to`, the clip links there; a separate control plays or pauses.
  */
 export function LoopVideo({
   name,
@@ -48,9 +48,10 @@ export function LoopVideo({
   name: string
   webm?: boolean
   poster: string
-  to: string
+  /** Link target. Without it the clip is a plain video. */
+  to?: string
   label: string
-  cta: string
+  cta?: string
   eager?: boolean
 }) {
   const video = useRef<HTMLVideoElement>(null)
@@ -112,36 +113,51 @@ export function LoopVideo({
     setUserPaused((p) => !p)
   }
 
+  const hold = {
+    onMouseEnter: () => setHeld(true),
+    onMouseLeave: () => setHeld(false),
+    onFocus: () => setHeld(true),
+    onBlur: () => setHeld(false),
+  }
+  const media = (
+    <video
+      ref={video}
+      poster={poster}
+      muted
+      loop
+      playsInline
+      preload={near ? 'auto' : 'none'}
+      aria-hidden={to ? true : undefined}
+      aria-label={to ? undefined : label}
+      // Plain clips pause while hovered. The play button sits outside this, so it still works.
+      onMouseEnter={to ? undefined : hold.onMouseEnter}
+      onMouseLeave={to ? undefined : hold.onMouseLeave}
+      onPlay={() => setPlaying(true)}
+      onPause={() => setPlaying(false)}
+      className="block aspect-[1440/900] w-full bg-canvas object-cover"
+    >
+      {near && webm && <source src={`${VIDEO}${name}.webm`} type="video/webm" />}
+      {near && <source src={`${VIDEO}${name}.mp4`} type="video/mp4" />}
+    </video>
+  )
+
   return (
-    <div ref={wrap} className="group relative overflow-hidden rounded-panel border border-line bg-surface shadow-card transition-shadow hover:shadow-pop">
-      <Link
-        to={to}
-        aria-label={label}
-        onMouseEnter={() => setHeld(true)}
-        onMouseLeave={() => setHeld(false)}
-        onFocus={() => setHeld(true)}
-        onBlur={() => setHeld(false)}
-        className="block"
-      >
-        <video
-          ref={video}
-          poster={poster}
-          muted
-          loop
-          playsInline
-          preload={near ? 'auto' : 'none'}
-          aria-hidden
-          onPlay={() => setPlaying(true)}
-          onPause={() => setPlaying(false)}
-          className="block aspect-[1440/900] w-full bg-canvas object-cover"
-        >
-          {near && webm && <source src={`${VIDEO}${name}.webm`} type="video/webm" />}
-          {near && <source src={`${VIDEO}${name}.mp4`} type="video/mp4" />}
-        </video>
-        <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
-          {cta} <ArrowUpRight aria-hidden size={13} />
-        </span>
-      </Link>
+    <div
+      ref={wrap}
+      className={`group relative overflow-hidden rounded-panel border border-line bg-surface shadow-card ${to ? 'transition-shadow hover:shadow-pop' : ''}`}
+    >
+      {to ? (
+        <Link to={to} aria-label={label} {...hold} className="block">
+          {media}
+          {cta && (
+            <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
+              {cta} <ArrowUpRight aria-hidden size={13} />
+            </span>
+          )}
+        </Link>
+      ) : (
+        media
+      )}
       <button
         onClick={toggle}
         aria-label={playing ? 'Pause video' : 'Play video'}

@@ -1,12 +1,13 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { ArrowUpRight } from 'lucide-react'
+import { ArrowUpRight, Check, CircleAlert } from 'lucide-react'
 import { gsap, useGSAP, withMotion } from '../proto/motion'
 import { AiTag } from '../proto/components/AiTag'
 import {
   AJAIA_SOURCES,
   AJAIA_URL,
+  EXPECTATIONS,
   JOURNEY,
   NEXT_STEPS,
   PORTFOLIO_URL,
@@ -14,7 +15,6 @@ import {
   QUESTIONS,
   SCENARIOS,
   SHIPS_FIRST,
-  WISHLIST,
   YOUTUBE_URL,
   type Scenario,
 } from './content'
@@ -41,8 +41,6 @@ function jump(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })
 }
 
-const scenarioUrl = (id: string) => `${PROTOTYPE_URL}?scenario=${id}`
-
 export default function Home() {
   const root = useRef<HTMLDivElement>(null)
   const progress = useRef<HTMLDivElement>(null)
@@ -61,6 +59,9 @@ export default function Home() {
         gsap.utils.toArray<HTMLElement>('[data-bar]').forEach((el) => {
           gsap.from(el, { scaleX: 0, duration: 0.7, ease: 'power3.out', scrollTrigger: { trigger: el, start: 'top 90%', once: true } })
         })
+        const line = root.current?.querySelector('[data-journey-line]')
+        if (line) gsap.from(line, { scaleX: 0, ease: 'none', scrollTrigger: { trigger: '#journey', start: 'top 75%', end: 'bottom 60%', scrub: 0.3 } })
+        gsap.from('[data-stage]', { opacity: 0, y: 10, duration: 0.4, stagger: 0.06, ease: 'power3.out', scrollTrigger: { trigger: '#journey', start: 'top 75%', once: true } })
       }),
     { scope: root },
   )
@@ -142,8 +143,8 @@ export default function Home() {
               </p>
             </Sub>
 
-            <Sub title="Today’s journey">
-              <ResponsiveTable head={['Step', 'Time', 'Evidence']} rows={JOURNEY} />
+            <Sub title="Today’s journey" id="journey">
+              <Journey />
             </Sub>
 
             <Sub title="The problem">
@@ -153,48 +154,44 @@ export default function Home() {
               </p>
             </Sub>
 
-            <Sub title="Wishlist vs. evidence">
-              <ResponsiveTable
-                head={['Owen asked for', 'Evidence', 'Decision']}
-                rows={WISHLIST.map((w) => [
-                  w.notAsked ? (
-                    <>
-                      <em className="font-normal text-ink-3">Not asked:</em> {w.ask}
-                    </>
-                  ) : (
-                    w.ask
-                  ),
-                  w.evidence,
-                  w.decision,
-                ])}
-              />
-              <div className="mt-10 grid gap-10 md:grid-cols-2">
-                <div data-reveal className="space-y-4 text-md text-ink-2">
-                  <p>
-                    <strong className="font-semibold text-ink">Where the sources agree:</strong> Colin guessed &ldquo;maybe a third&rdquo; have a mismatch. The logs
-                    show 35&ndash;38%.
-                  </p>
-                  <p>
-                    <strong className="font-semibold text-ink">Where they disagree:</strong> Anika wants autofill. Her log shows her time going to mismatches and
-                    broker waits.
-                  </p>
-                </div>
+            <div className="grid gap-10 md:grid-cols-2">
+              <div data-reveal>
+                <h3 className="text-xs font-medium uppercase tracking-[0.08em] text-ink-3">Where the sources agree</h3>
+                <p className="mt-2 font-display text-[24px] leading-8">Mismatches are frequent.</p>
+                <p className="mt-2 text-md text-ink-2">Colin guessed &ldquo;maybe a third&rdquo;. The logs show 35&ndash;38%.</p>
+                <MismatchChart />
+              </div>
+              <div data-reveal>
+                <h3 className="text-xs font-medium uppercase tracking-[0.08em] text-ink-3">Where they disagree</h3>
+                <p className="mt-2 font-display text-[24px] leading-8">Anika wants autofill. Her log points elsewhere.</p>
+                <p className="mt-2 text-md text-ink-2">Her time goes to mismatches and broker waits.</p>
                 <MinutesChart />
               </div>
+            </div>
+
+            <Sub title="Stakeholder expectations">
+              <ResponsiveTable head={['Asked for', 'How it appears', 'Evidence']} rows={EXPECTATIONS} />
             </Sub>
 
-            <Sub title="Pushback">
-              <blockquote data-reveal className="max-w-3xl border-l-2 border-ink pl-5 font-display text-[24px] leading-8 md:text-[28px] md:leading-9">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.08em] text-ink-3">Pushback</p>
+              <h3 data-reveal className="mt-2 max-w-3xl font-display text-[26px] leading-9 md:text-[32px] md:leading-10">
                 &ldquo;Our users asked for the wishlist. Why are you showing me something else?&rdquo;
-              </blockquote>
-              <p data-reveal className="mt-5 max-w-2xl text-md text-ink-2">
-                <strong className="font-semibold text-ink">The checklist is 3 minutes of the work.</strong> The rest of the week goes to the steps around it. Every
-                wishlist item still has a place, sized to its evidence.
-              </p>
-            </Sub>
+              </h3>
+              <div className="mt-6 grid gap-10 md:grid-cols-[1.3fr_1fr]">
+                <p data-reveal className="text-md leading-7 text-ink-2">
+                  <strong className="font-semibold text-ink">The checklist is 3 minutes of the work.</strong> The rest of the week goes to the steps around it.
+                  Every wishlist item still has a place, sized to its evidence.
+                </p>
+                <aside data-reveal className="self-start rounded-panel border border-line bg-surface p-5">
+                  <p className="text-xs font-medium uppercase tracking-[0.08em] text-ink-3">Where the minutes go, per submission</p>
+                  <MinutesChart compact />
+                </aside>
+              </div>
+            </div>
 
             <Sub title="What ships first">
-              <NumberedCards items={SHIPS_FIRST} />
+              <PhaseCards items={SHIPS_FIRST} label="Phase" />
             </Sub>
           </div>
         </Section>
@@ -256,52 +253,65 @@ export default function Home() {
         <Section id="ajaia" label="Why Ajaia" title="The parts exist, outside insurance" lede="Bind Desk combines patterns Ajaia has already shipped.">
           <ul className="grid gap-3 md:grid-cols-2">
             {AJAIA_SOURCES.map((s) => (
-              <li key={s.href} data-reveal className="rounded-card border border-line bg-surface p-5 text-md text-ink-2">
-                <a href={s.href} target="_blank" rel="noreferrer" className="font-semibold text-ink underline decoration-line-strong underline-offset-[3px] hover:decoration-ink">
-                  {s.lead}
-                </a>{' '}
-                {s.text}
+              <li key={s.href} data-reveal className="flex flex-col rounded-card border border-line bg-surface p-5">
+                <p className="text-md font-semibold">{s.lead}</p>
+                <p className="mt-1 flex-1 text-md text-ink-2">{s.text}</p>
+                <a href={s.href} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 self-start text-sm font-medium underline underline-offset-2 hover:text-ink-2">
+                  {s.label} <ArrowUpRight aria-hidden size={14} />
+                </a>
               </li>
             ))}
-            <li data-reveal className="rounded-card border border-line bg-surface p-5 text-md text-ink-2">
-              <strong className="font-semibold text-ink">Approvals and audit trails:</strong> Built into Ajaia&rsquo;s{' '}
-              <a href={AJAIA_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 font-medium text-ink underline underline-offset-[3px]">
-                workflow automation <ArrowUpRight aria-hidden size={14} />
-              </a>{' '}
-              service.
-            </li>
           </ul>
-          <p data-reveal className="mt-5 text-sm text-ink-3">
-            <strong className="font-semibold text-ink-2">Note:</strong> These are Ajaia&rsquo;s reported results. None cover underwriting.
+          <p data-reveal className="mt-5 max-w-3xl text-md text-ink-2">
+            These are Ajaia&rsquo;s reported results. None cover underwriting.{' '}
+            <a href={`${AJAIA_URL}/case-studies`} target="_blank" rel="noreferrer" className="font-medium text-ink underline underline-offset-2">
+              All Ajaia case studies
+            </a>
           </p>
         </Section>
 
         {/* Next-round questions */}
         <Section id="questions" label="Next-round questions" title="What we still need to learn" lede="Each answer confirms the design or changes one part of it.">
-          <ResponsiveTable head={['Question', 'Current assumption', 'If wrong']} rows={QUESTIONS} />
+          <ol className="grid gap-4 md:grid-cols-2">
+            {QUESTIONS.map((q, i) => (
+              <li key={q.q} data-reveal className="flex flex-col rounded-panel border border-line bg-surface p-5">
+                <span className="font-mono text-xs text-ink-3">Q{i + 1}</span>
+                <p className="mt-1 text-md font-semibold">{q.q}</p>
+                <dl className="mt-3 flex-1 space-y-2 border-t border-line pt-3 text-sm">
+                  <div className="grid grid-cols-[88px_1fr] gap-3">
+                    <dt className="text-ink-3">Assumed</dt>
+                    <dd className="text-ink">{q.assumed}</dd>
+                  </div>
+                  <div className="grid grid-cols-[88px_1fr] gap-3">
+                    <dt className="text-ink-3">If wrong</dt>
+                    <dd className="text-ink">{q.ifWrong}</dd>
+                  </div>
+                </dl>
+                <p className="mt-4 text-xs text-ink-3">
+                  Shapes: <span className="font-medium text-ink-2">{q.shapes}</span>
+                </p>
+              </li>
+            ))}
+          </ol>
         </Section>
 
         {/* Clarifications */}
         <Section id="ai" label="Clarifications" title="How I used AI">
-          <div data-reveal className="max-w-2xl text-md text-ink-2">
-            <p>
-              <strong className="font-semibold text-ink">I made the design decisions.</strong> AI helped with:
-            </p>
-            <ul className="mt-4 space-y-3">
-              {['Research', 'Exploration', 'Prototyping'].map((k) => (
-                <li key={k}>
-                  <strong className="font-semibold text-ink">{k}:</strong> <Placeholder />
-                </li>
-              ))}
-            </ul>
-            <p className="mt-6">
-              <strong className="font-semibold text-ink">One thing I rejected:</strong> <Placeholder />
-            </p>
+          <p data-reveal className="max-w-2xl text-md text-ink-2">
+            <strong className="font-semibold text-ink">I made the design decisions.</strong> AI helped with:
+          </p>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {['Research', 'Exploration', 'Prototyping', 'One thing I rejected'].map((slot) => (
+              <div key={slot} data-reveal className="rounded-panel border border-dashed border-line-strong bg-canvas p-5">
+                <h3 className="text-md font-semibold">{slot}</h3>
+                <p className="mt-2 text-sm text-ink-3">[your example]</p>
+              </div>
+            ))}
           </div>
         </Section>
 
         <Section id="next" label="Next steps" title="Ship the mismatch check first">
-          <NumberedCards items={NEXT_STEPS} />
+          <PhaseCards items={NEXT_STEPS} label="Step" />
         </Section>
       </main>
 
@@ -353,19 +363,15 @@ function Section({ id, label, title, lede, children }: { id: string; label: stri
   )
 }
 
-function Sub({ title, children }: { title: string; children: ReactNode }) {
+function Sub({ title, id, children }: { title: string; id?: string; children: ReactNode }) {
   return (
-    <div>
+    <div id={id}>
       <h3 data-reveal className="mb-4 font-display text-[24px] leading-8 md:text-[26px]">
         {title}
       </h3>
       {children}
     </div>
   )
-}
-
-function Placeholder() {
-  return <span className="rounded-chip border border-dashed border-line-strong px-1.5 py-0.5 text-sm text-ink-3">[your example]</span>
 }
 
 function VideoBlock() {
@@ -439,18 +445,58 @@ function ResponsiveTable({ head, rows }: { head: string[]; rows: ReactNode[][] }
   )
 }
 
-function NumberedCards({ items }: { items: [string, string][] }) {
+function PhaseCards({ items, label }: { items: [string, string][]; label: string }) {
   return (
     <ol className="grid gap-4 md:grid-cols-3">
-      {items.map(([lead, rest], i) => (
-        <li key={lead} data-reveal className="rounded-panel border border-line bg-surface p-5">
-          <p className="font-mono text-xs text-ink-3">{i + 1}</p>
-          <p className="mt-1 text-md text-ink-2">
-            <strong className="font-semibold text-ink">{lead}</strong> {rest}
+      {items.map(([title, rest], i) => (
+        <li key={title} data-reveal className="rounded-panel border border-line bg-surface p-5">
+          <p className="font-mono text-xs text-ink-3">
+            {label} {i + 1}
           </p>
+          <h3 className="mt-1 text-md font-semibold">{title.replace(/\.$/, '')}</h3>
+          <p className="mt-1 text-sm text-ink-2">{rest}</p>
         </li>
       ))}
     </ol>
+  )
+}
+
+function Journey() {
+  return (
+    <div className="relative">
+      <div aria-hidden className="absolute left-0 right-0 top-[15px] hidden h-px bg-line md:block" />
+      <div aria-hidden data-journey-line className="absolute left-0 right-0 top-[15px] hidden h-px origin-left bg-ink md:block" />
+      <ol className="grid gap-8 md:grid-cols-6 md:gap-4">
+        {JOURNEY.map((s, i) => {
+          const gap = s.fit === 'gap'
+          const Icon = gap ? CircleAlert : Check
+          return (
+            <li key={s.stage} data-stage className="relative grid grid-cols-[32px_1fr] gap-3 md:block">
+              <span className="relative z-10 grid h-8 w-8 place-items-center rounded-full border border-ink bg-canvas font-mono text-xs">{i + 1}</span>
+              <div className="md:mt-4">
+                <h4 className="text-md font-semibold">{s.stage}</h4>
+                <p className="mt-1 text-sm text-ink-2">{s.happens}</p>
+                <p className="mt-2 border-l-2 border-danger-line pl-2 text-xs text-ink-2">{s.evidence}</p>
+                <p
+                  className={`mt-2 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${
+                    gap ? 'border-danger-line bg-danger-bg text-danger' : 'border-success-line bg-success-bg text-success'
+                  }`}
+                >
+                  <Icon aria-hidden size={12} />
+                  {gap ? 'Gap' : 'Agrees'}
+                  <span className="sr-only">: </span>
+                </p>
+                <p className="mt-1 text-xs text-ink-3">{s.fitNote}</p>
+                <p className="mt-2 text-xs font-medium text-ink">
+                  <span className="text-ink-3">You: </span>
+                  {s.check}
+                </p>
+              </div>
+            </li>
+          )
+        })}
+      </ol>
+    </div>
   )
 }
 
@@ -462,21 +508,35 @@ function Bar({ label, value, max, display, tone = 'bg-ink' }: { label: string; v
         <div className="h-6 flex-1 rounded-chip bg-muted">
           <div data-bar className={`h-6 origin-left rounded-chip ${tone}`} style={{ width: `${(value / max) * 100}%` }} />
         </div>
-        <span className="w-[52px] shrink-0 font-mono text-[13px] text-ink">{display}</span>
+        <span className="w-[56px] shrink-0 font-mono text-[13px] text-ink">{display}</span>
       </div>
     </div>
   )
 }
 
-function MinutesChart() {
+function MismatchChart() {
   return (
-    <figure data-reveal className="rounded-panel border border-line bg-surface p-5">
-      <figcaption className="mb-4 text-sm font-medium">Minutes per submission</figcaption>
+    <figure className="mt-6 rounded-panel border border-line bg-surface p-5">
+      <figcaption className="mb-4 text-sm font-medium">Submissions with a mismatch, 30 days</figcaption>
       <div className="space-y-3">
-        <Bar label="Find documents (Colin)" value={11} max={14} display="11" />
-        <Bar label="First flag (Anika)" value={14} max={14} display="14" />
-        <Bar label="Checklist (Colin)" value={3} max={14} display="3" tone="bg-success" />
+        <Bar label="Anika" value={23} max={61} display="38%" tone="bg-danger" />
+        <Bar label="Colin" value={19} max={54} display="35%" tone="bg-danger" />
       </div>
+      <p className="mt-3 text-xs text-ink-3">23 of 61 and 19 of 54. Colin&rsquo;s guess: 33%.</p>
+    </figure>
+  )
+}
+
+function MinutesChart({ compact = false }: { compact?: boolean }) {
+  return (
+    <figure className={compact ? 'mt-4' : 'mt-6 rounded-panel border border-line bg-surface p-5'}>
+      {!compact && <figcaption className="mb-4 text-sm font-medium">Minutes per submission</figcaption>}
+      <div className="space-y-3">
+        <Bar label="Find documents (Colin)" value={11} max={14} display="11 min" />
+        <Bar label="First flag (Anika)" value={14} max={14} display="14 min" />
+        <Bar label="Checklist (Colin)" value={3} max={14} display="3 min" tone="bg-success" />
+      </div>
+      {!compact && <p className="mt-3 text-xs text-ink-3">Different people, so the bars aren&rsquo;t added.</p>}
     </figure>
   )
 }
@@ -494,8 +554,7 @@ function ScenarioCard({ s, flip }: { s: Scenario; flip: boolean }) {
   return (
     <article aria-labelledby={`sc-${s.id}`} className="grid gap-6 md:grid-cols-[1fr_1.45fr] md:items-center md:gap-12">
       <div data-reveal className={flip ? 'md:order-2' : ''}>
-        <p className="font-mono text-xs text-ink-3">Scenario {s.id}</p>
-        <h3 id={`sc-${s.id}`} className="mt-1 font-display text-[28px] leading-9">
+        <h3 id={`sc-${s.id}`} className="font-display text-[28px] leading-9">
           {s.title}
         </h3>
         <dl className="mt-4 space-y-3 border-t border-line pt-4 text-sm">
@@ -506,12 +565,21 @@ function ScenarioCard({ s, flip }: { s: Scenario; flip: boolean }) {
             </div>
           ))}
         </dl>
-        <Link to={scenarioUrl(s.id)} className="mt-5 inline-flex h-9 items-center gap-1 rounded-full border border-line-strong bg-surface px-4 text-sm font-medium transition-colors hover:border-ink-3 hover:bg-muted">
-          Try scenario {s.id} <ArrowUpRight aria-hidden size={14} />
-        </Link>
+        {s.assumes && (
+          <dl className="mt-4 space-y-2 rounded-card border border-dashed border-line-strong p-3 text-sm">
+            <div className="grid grid-cols-[76px_1fr] gap-3">
+              <dt className="text-ink-3">Assumes</dt>
+              <dd className="text-ink-2">{s.assumes}</dd>
+            </div>
+            <div className="grid grid-cols-[76px_1fr] gap-3">
+              <dt className="text-ink-3">If wrong</dt>
+              <dd className="text-ink-2">{s.ifWrong}</dd>
+            </div>
+          </dl>
+        )}
       </div>
       <div data-reveal className={flip ? 'md:order-1' : ''}>
-        <LoopVideo name={name} poster={posterOf(name)} to={scenarioUrl(s.id)} label={s.videoLabel} cta={`Try scenario ${s.id}`} />
+        <LoopVideo name={name} poster={posterOf(name)} label={s.videoLabel} />
       </div>
     </article>
   )
