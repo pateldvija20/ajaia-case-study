@@ -69,7 +69,7 @@ Prototype: https://pateldvija20.github.io/ajaia-case-study/#/prototype (fictiona
 
 ### Three screens
 
-The prototype opens in a window with a left panel: the date with Advance 1 day, the design decision for whatever you hover, a guided tour, a Desktop / Mobile glance switch and Reset.
+The prototype opens in a window with a left panel: a guided tour, the date with previous and next day arrows, a Desktop / Mobile glance switch and Reset. Hovering any part of the prototype shows its design decision next to the cursor. The app runs in a laptop browser with two tabs, Bind Desk and the webmail inbox, where the capture extension sits in the toolbar.
 
 1. **Capture panel** (scenario C: https://pateldvija20.github.io/ajaia-case-study/#/prototype?scenario=C). A browser side panel reads attachments in web inboxes and broker portals, names each document type and matches it to an application. Clicking a document previews it beside the panel. A match at 40% confidence waits for the user to pick the right application. A scan upload handles faxes.
 2. **Home and Applications** (scenario D: https://pateldvija20.github.io/ajaia-case-study/#/prototype?scenario=D). Home groups open work by one-word status (Mismatch, Missing, Overdue, Waiting, Ready), oldest first, with each next step written as a sentence and an inline link. The follow-up threshold is set per policy; a row turns Overdue when it passes. Applications has a date-range summary (Started, Bound, Still open) and Open, In review and Closed tabs.

@@ -1,10 +1,11 @@
 import { useRef } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { useProto, type RangeId } from '../store'
 import { displayStatus, fmtDay, inRange } from '../logic'
 import { gsap, useGSAP, useIndicator, withMotion } from '../motion'
 import { StatusBadge } from '../components/StatusBadge'
 import { Counter } from '../components/ui'
-import { InlineLink, SubCard } from './Home'
+import { InlineLink, SubRow, TableHead } from './Home'
 import type { AppsTab } from '../types'
 
 function rangeDays(r: RangeId, day: number): [number, number] {
@@ -67,17 +68,18 @@ export function Applications() {
           <h1 className="font-display text-[34px] leading-[40px] tracking-[-0.01em]">Applications</h1>
           <p className="text-sm text-ink-3">Every application, open and closed</p>
         </div>
-        <label className="flex items-center gap-2 text-sm text-ink-2">
-          Date range
+        <label className="relative inline-flex h-9 items-center rounded-full border border-line-strong bg-surface pl-3 text-sm transition-colors focus-within:border-ink hover:border-ink-3">
+          <span className="text-ink-3">Date range</span>
           <select
             value={range}
             onChange={(e) => setRange(e.target.value as RangeId)}
-            className="h-9 rounded-full border border-line-strong bg-surface pl-3 pr-7 text-sm text-ink hover:border-ink-3"
+            className="h-full cursor-pointer appearance-none bg-transparent pl-2 pr-8 font-medium text-ink outline-none"
           >
             <option value="this">This week · 13 – 17 Apr</option>
             <option value="last">Last week · 6 – 10 Apr</option>
             <option value="30">Last 30 days · to {fmtDay(day)}</option>
           </select>
+          <ChevronDown aria-hidden size={14} className="pointer-events-none absolute right-3 text-ink-3" />
         </label>
       </header>
 
@@ -121,15 +123,15 @@ export function Applications() {
         {tab === 'closed' && 'Policies bound in the selected date range.'}
       </p>
 
-      <div role="table" aria-label={`${tab} applications`} data-list className="mt-3 space-y-2">
-        {tab !== 'closed' &&
-          lists[tab].map((s) => <SubCard key={s.id} sub={s} />)}
+      <div role="table" aria-label={`${tab} applications`} data-list className="mt-3 overflow-hidden rounded-panel border border-line bg-surface shadow-card">
+        {tab !== 'closed' && <TableHead />}
+        {tab !== 'closed' && lists[tab].map((s) => <SubRow key={s.id} sub={s} showStatus />)}
         {tab === 'closed' &&
           lists.closed.map((s) => (
             <div
               key={s.id}
               role="row"
-              className="grid gap-x-5 gap-y-1 rounded-card border border-line bg-surface px-4 py-3.5 shadow-card md:grid-cols-[minmax(0,240px)_minmax(0,1fr)_160px_120px] md:items-center"
+              className="grid items-start gap-x-5 gap-y-1 border-t border-line bg-surface px-5 py-3.5 first:border-t-0 md:grid-cols-[minmax(0,240px)_minmax(0,1fr)_160px_120px]"
             >
               <div role="cell">
                 <span className="block text-[15px] font-semibold">{s.client}</span>
@@ -149,7 +151,7 @@ export function Applications() {
               </div>
             </div>
           ))}
-        {!lists[tab].length && <p className="py-8 text-sm text-ink-3">Nothing in this tab for the selected range.</p>}
+        {!lists[tab].length && <p className="px-5 py-8 text-sm text-ink-3">Nothing in this tab for the selected range.</p>}
       </div>
     </div>
   )

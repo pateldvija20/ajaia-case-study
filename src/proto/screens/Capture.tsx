@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { ArrowRight, FileText, Inbox, Loader2, Paperclip, PenSquare, Send as SendIcon, Star, Upload, X, Archive, ChevronLeft, ChevronRight, RotateCw } from 'lucide-react'
+import { ArrowRight, FileText, Inbox, Loader2, Paperclip, PenSquare, Send as SendIcon, Star, Upload, X, Archive,  } from 'lucide-react'
 import { useProto } from '../store'
 import { INBOX } from '../mockData'
 import { gsap, prefersReduced, useGSAP, withMotion } from '../motion'
@@ -20,31 +20,6 @@ export function Capture() {
 
   return (
     <div data-decision="capture" className="relative flex h-full min-h-[560px] flex-col overflow-hidden bg-[#e9e9e5]">
-      {/* Generic browser chrome */}
-      <div className="flex h-11 shrink-0 items-center gap-2 border-b border-line-strong bg-[#efefeb] px-3">
-        <span aria-hidden className="flex gap-1.5">
-          <i className="h-3 w-3 rounded-full bg-[#d6d6d1]" />
-          <i className="h-3 w-3 rounded-full bg-[#d6d6d1]" />
-          <i className="h-3 w-3 rounded-full bg-[#d6d6d1]" />
-        </span>
-        <span aria-hidden className="ml-2 flex gap-1 text-ink-3">
-          <ChevronLeft size={16} />
-          <ChevronRight size={16} />
-          <RotateCw size={14} className="mt-px" />
-        </span>
-        <div className="mx-2 flex h-7 flex-1 items-center rounded-full bg-surface px-3 text-xs text-ink-3">webmail.example.com/inbox</div>
-        <button
-          onClick={() => setPanel(!capture.panelOpen)}
-          aria-pressed={capture.panelOpen}
-          aria-label="Bind Desk extension"
-          className={`grid h-7 w-7 place-items-center rounded-md border transition-colors ${capture.panelOpen ? 'border-ink bg-ink text-white' : 'border-line-strong bg-surface text-ink hover:bg-muted'}`}
-        >
-          <svg aria-hidden width="14" height="14" viewBox="0 0 32 32">
-            <path d="M8 16.5l5 5L24 10.5" stroke="currentColor" strokeWidth="3.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-      </div>
-
       {/* Generic webmail */}
       <div className="flex min-h-0 flex-1 bg-surface" aria-label="Webmail (fictional)" role="region">
         <nav className="hidden w-48 shrink-0 border-r border-line p-3 text-sm lg:block">
@@ -171,9 +146,9 @@ function CapturePanel({ onClose }: { onClose: () => void }) {
 
   return (
     <>
-      <div ref={scrim} aria-hidden className="absolute inset-x-0 bottom-0 top-11 bg-[rgb(25_25_24/0.42)]" onClick={() => (previewDoc ? setPreview(null) : onClose())} />
+      <div ref={scrim} aria-hidden className="absolute inset-0 bg-[rgb(25_25_24/0.42)]" onClick={() => (previewDoc ? setPreview(null) : onClose())} />
       {previewDoc && (
-        <div className="pointer-events-none absolute bottom-0 left-0 right-[440px] top-11 hidden items-start justify-center overflow-auto p-6 md:flex">
+        <div className="pointer-events-none absolute bottom-0 left-0 right-[440px] top-0 hidden items-start justify-center overflow-auto p-6 md:flex">
           <div ref={previewRef} className="pointer-events-auto relative w-full max-w-[520px]" role="region" aria-label={`Preview of ${previewDoc.file}`}>
             <button onClick={() => setPreview(null)} aria-label="Close preview" className="absolute right-3 top-3 z-10 grid h-8 w-8 place-items-center rounded-full bg-muted text-ink hover:bg-sunken">
               <X aria-hidden size={15} />
@@ -193,7 +168,7 @@ function CapturePanel({ onClose }: { onClose: () => void }) {
       <aside
         ref={panel}
         aria-label="Bind Desk capture panel"
-        className="absolute bottom-0 right-0 top-11 flex w-full max-w-[440px] flex-col bg-surface shadow-panel"
+        className="absolute bottom-0 right-0 top-0 flex w-full max-w-[440px] flex-col bg-surface shadow-panel"
       >
         <header className="flex items-start justify-between gap-3 border-b border-line px-5 pb-3 pt-4">
           <div>

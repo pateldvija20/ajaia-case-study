@@ -51,3 +51,20 @@ Three worst problems found and fixed:
 3. The capture preview's close button overlapped the webmail behind it, and policy numbers wrapped mid-number on Home. The close button moved onto the card; policy numbers no longer wrap.
 
 Also fixed: Harborview's follow-up threshold is 3 days, so in scenario D only the right rows turn Overdue.
+
+## Round 4 (window panel, browser tabs, Home table)
+
+Changes from the author's markup: black left panel ordered title, author, guided tour, date with previous and next arrows, view switch, reset. Design decisions became a tooltip that follows the cursor. The laptop shows browser tabs (Bind Desk and Inbox); the capture extension sits in the toolbar with a document-search icon, a count badge and a pulse while it is closed. Home got a plain-language title, four count boxes that filter, one table with Application, Broker and Next step columns, top-aligned rows and the day count highlighted in the message.
+
+| Criterion | Score |
+|---|---|
+| First-glance clarity | 8 |
+| Readability at 390 px | 8 |
+| Motion quality | 8 |
+| Consistency with references | 8 |
+| Copy quality | 8 |
+
+Three worst problems found and fixed:
+1. The view switch's pill used the stretch indicator (a 1px bar scaled up), which distorted its rounded corners. It is now a fixed half-width pill that only translates, with `back.out(1.1)`.
+2. The decision tooltip appeared on any focus, including while typing in the email textarea, and on touch. It now shows on hover and on keyboard focus only.
+3. The extension's count badge was clipped by the toolbar edge. The toolbar got more height and right padding.

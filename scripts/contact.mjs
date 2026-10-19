@@ -66,7 +66,7 @@ async function strip(name, url, act, times, clip, vw = 1440) {
   await p.close()
 }
 const full = undefined
-await strip('capture-entrance', '#/prototype?scenario=C', async (p) => p.getByRole('button', { name: 'Bind Desk extension' }).click().then(() => p.getByRole('button', { name: 'Bind Desk extension' }).click()), [80, 250, 500, 1000, 1500, 2000], { x: 900, y: 20, width: 540, height: 700 })
+await strip('capture-entrance', '#/prototype', (p) => p.getByRole('button', { name: /Bind Desk capture extension/ }).click(), [80, 250, 500, 1000, 1500, 2000], { x: 900, y: 20, width: 540, height: 700 })
 await strip('apps-tab', '#/prototype?frame=2b', (p) => p.getByRole('tab', { name: /Closed/ }).click(), [40, 120, 220, 450], { x: 540, y: 260, width: 520, height: 120 })
 await strip('decide-draft', '#/prototype?frame=3a', async (p) => {
   await p.getByRole('radio', { name: 'Real mismatch' }).first().click()
@@ -74,7 +74,9 @@ await strip('decide-draft', '#/prototype?frame=3a', async (p) => {
 }, [100, 300, 700, 1100], full)
 await strip('highlight-to-top', '#/prototype?frame=3a', (p) => p.locator('[data-hl="right-ins"]').click(), [60, 200, 450, 900], { x: 1060, y: 140, width: 340, height: 520 })
 await strip('device-switch', '#/prototype?frame=2a', (p) => p.getByRole('radio', { name: 'Mobile glance' }).click(), [40, 150, 300, 600], full)
-await strip('decision-hover', '#/prototype?frame=2a', (p) => p.locator('[data-flip-id="alder"] [data-decision="next-step"]').hover(), [60, 200], { x: 0, y: 220, width: 300, height: 240 })
+await strip('decision-tooltip', '#/prototype?frame=2a', (p) => p.locator('[data-flip-id="alder"] [data-decision="next-step"]').hover(), [60, 250], { x: 700, y: 500, width: 740, height: 400 })
+await strip('extension-pulse', '#/prototype', null, [100, 500, 900, 1300], { x: 1240, y: 60, width: 200, height: 100 })
+await strip('device-pill', '#/prototype', (p) => p.getByRole('radio', { name: 'Mobile glance' }).click(), [40, 120, 220, 400], { x: 0, y: 740, width: 280, height: 90 })
 await strip('bind', '#/prototype?frame=6a', (p) => p.getByRole('button', { name: 'Approve and bind…' }).click(), [40, 120, 250, 450], full)
 
 await browser.close()

@@ -55,6 +55,7 @@ interface Actions {
   logCall: (subId: string) => void
   wait: (subId: string) => void
   advanceDay: () => void
+  previousDay: () => void
   setFollowUpDays: (subId: string, n: number) => void
   setDevice: (d: Device) => void
   setHomeFilter: (f: DisplayStatus | 'all') => void
@@ -104,7 +105,7 @@ export function seed(): Data {
     editing: null,
     sent: {},
     followChoice: {},
-    capture: { docs: clone(CAPTURE_DOCS), faxAdded: false, panelOpen: true, previewId: null },
+    capture: { docs: clone(CAPTURE_DOCS), faxAdded: false, panelOpen: false, previewId: null },
     screen: { name: 'home' },
     bindDialog: 'closed',
     pendingMove: null,
@@ -193,7 +194,7 @@ function scenarioData(id: ScenarioId, current: Data): Data {
     case 'E':
       return open('northgate', 'bind')(base)
     case 'C':
-      return { ...base, screen: { name: 'capture' } }
+      return { ...base, screen: { name: 'capture' }, capture: { ...base.capture, panelOpen: true } }
     case 'D': {
       // Chain from A: reuse the live state if Harbor Line is already waiting.
       const harbor = current.subs.find((s) => s.id === 'harbor')
@@ -209,12 +210,18 @@ function scenarioData(id: ScenarioId, current: Data): Data {
 }
 
 export const FRAMES: Record<FrameId, { label: string; build: () => Data }> = {
-  '1a': { label: 'Capture · documents found', build: () => ({ ...seed(), screen: { name: 'capture' } }) },
+  '1a': {
+    label: 'Capture · documents found',
+    build: () => {
+      const d = seed()
+      return { ...d, screen: { name: 'capture' }, capture: { ...d.capture, panelOpen: true } }
+    },
+  },
   '1b': {
     label: 'Capture · 40% match and preview',
     build: () => {
       const d = seed()
-      return { ...d, screen: { name: 'capture' }, scrollTarget: 'd3', capture: { ...d.capture, previewId: 'd3' } }
+      return { ...d, screen: { name: 'capture' }, scrollTarget: 'd3', capture: { ...d.capture, panelOpen: true, previewId: 'd3' } }
     },
   },
   '1c': {
@@ -223,7 +230,7 @@ export const FRAMES: Record<FrameId, { label: string; build: () => Data }> = {
       const d = { ...seed(), screen: { name: 'capture' } as Screen }
       return {
         ...d,
-        capture: { ...d.capture, faxAdded: true, previewId: 'd5', docs: [...d.capture.docs.map((x) => (x.id === 'd3' ? { ...x, state: 'confirmed' as const } : x)), FAX_DOC] },
+        capture: { ...d.capture, panelOpen: true, faxAdded: true, previewId: 'd5', docs: [...d.capture.docs.map((x) => (x.id === 'd3' ? { ...x, state: 'confirmed' as const } : x)), FAX_DOC] },
         scrollTarget: 'upload',
       }
     },
@@ -293,6 +300,11 @@ export const useProto = create<ProtoState>((set, get) => {
     advanceDay: () => {
       flipBus.capture()
       apply(tAdvance)
+    },
+    previousDay: () => {
+      if (get().day <= 0) return
+      flipBus.capture()
+      apply((d) => ({ ...d, day: d.day - 1 }))
     },
     setFollowUpDays: (subId, n) => {
       flipBus.capture()
