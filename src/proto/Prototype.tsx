@@ -34,10 +34,12 @@ export default function Prototype() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // ?product=1: the product alone, without the demo panel. Used to record the hero video.
+  const product = params.get('product') === '1'
   return (
     <div className="flex h-dvh flex-col bg-[#e9e9e4] lg:flex-row">
-      <WindowPanel />
-      <Stage />
+      {!product && <WindowPanel />}
+      <Stage bare={product} />
       <Toasts />
     </div>
   )
@@ -223,7 +225,7 @@ function BrowserChrome() {
   )
 }
 
-function Stage() {
+function Stage({ bare = false }: { bare?: boolean }) {
   const { screen } = useProto()
   const setHover = useProto((s) => s.setHoverDecision)
 
@@ -246,7 +248,7 @@ function Stage() {
       onPointerLeave={() => setHover(null)}
       onBlurCapture={() => setHover(null)}
     >
-      <div className="flex min-h-0 w-full flex-col overflow-hidden bg-canvas lg:border-[10px] lg:border-l-0 lg:border-[#1c1c1b]">
+      <div className={`flex min-h-0 w-full flex-col overflow-hidden bg-canvas ${bare ? '' : 'lg:border-[10px] lg:border-l-0 lg:border-[#1c1c1b]'}`}>
         <BrowserChrome />
         <div className="relative min-h-0 flex-1 overflow-hidden">
           {screen.name === 'capture' ? <Capture /> : screen.name === 'app' ? <AppDetail key={screen.id} id={screen.id} /> : <AppShell />}

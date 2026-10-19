@@ -5,7 +5,7 @@ import { ArrowUpRight, Check, CircleDashed, Clock, Phone } from 'lucide-react'
 import { gsap, useGSAP, withMotion } from '../proto/motion'
 import { AiTag } from '../proto/components/AiTag'
 import { AJAIA_SOURCES, AJAIA_URL, HYPOTHESES, JOURNEY, NEEDS, PORTFOLIO_URL, PROTOTYPE_URL, QUESTIONS, WISHLIST, YOUTUBE_URL } from './content'
-import { FrameLoop } from './FrameLoop'
+import { ProductVideo } from './ProductVideo'
 import imgCapture from './img/1b.jpg'
 import imgDashboard from './img/2a.jpg'
 import imgReview from './img/3a.jpg'
@@ -106,17 +106,7 @@ export default function Home() {
             </div>
           </div>
           <div data-reveal className="mt-14">
-            <FrameLoop
-              to={`${PROTOTYPE_URL}?tour=1`}
-              linkLabel="Open the prototype: guided tour preview"
-              staticIndex={2}
-              frames={[
-                { src: imgCapture, label: 'Capture', alt: 'Capture panel over a webmail inbox: documents matched to applications, one at 40% confidence waiting for review.' },
-                { src: imgDashboard, label: 'Home', alt: 'Home: this week\u2019s open applications grouped by status, each with a next step and its link.' },
-                { src: imgReview, label: 'Review', alt: 'Application and certificate side by side, with the each occurrence limit highlighted as $2,000,000 against $1,000,000.' },
-                { src: imgBind, label: 'Bind', alt: 'Approve-and-bind dialog listing what was verified, with a required confirmation before binding.' },
-              ]}
-            />
+            <ProductVideo to={PROTOTYPE_URL} />
           </div>
         </section>
 
