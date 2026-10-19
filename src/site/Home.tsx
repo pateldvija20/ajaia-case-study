@@ -5,6 +5,7 @@ import { ArrowUpRight, Check, CircleDashed, Clock, Phone } from 'lucide-react'
 import { gsap, useGSAP, withMotion } from '../proto/motion'
 import { AiTag } from '../proto/components/AiTag'
 import { AJAIA_SOURCES, AJAIA_URL, HYPOTHESES, JOURNEY, NEEDS, PORTFOLIO_URL, PROTOTYPE_URL, QUESTIONS, WISHLIST, YOUTUBE_URL } from './content'
+import { FrameLoop } from './FrameLoop'
 import imgCapture from './img/1b.jpg'
 import imgDashboard from './img/2a.jpg'
 import imgReview from './img/3a.jpg'
@@ -35,7 +36,7 @@ export default function Home() {
   const progress = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    document.title = 'Marsh & Colby case study · Bind Desk'
+    document.title = 'Ajaia Assessment · Case study'
   }, [])
 
   useGSAP(
@@ -64,7 +65,7 @@ export default function Home() {
         <div ref={progress} aria-hidden className="absolute inset-x-0 bottom-[-1px] h-0.5 origin-left scale-x-0 bg-ink" />
         <div className="mx-auto flex max-w-[1120px] items-center justify-between gap-3 px-4 py-2.5 md:px-8">
           <button onClick={() => window.scrollTo({ top: 0 })} className="truncate text-left text-sm font-semibold">
-            Marsh &amp; Colby <span className="hidden font-normal text-ink-3 sm:inline">· discovery case study</span>
+            Ajaia Assessment <span className="hidden font-normal text-ink-3 sm:inline">· Case study</span>
           </button>
           <nav aria-label="Sections" className="flex items-center gap-0.5">
             {NAV.map(([label, id]) => (
@@ -85,12 +86,14 @@ export default function Home() {
           <p className="text-xs font-medium uppercase tracking-[0.08em] text-ink-3">Design Lead · discovery engagement for Marsh &amp; Colby</p>
           <div className="mt-4 grid gap-10 md:grid-cols-[1.5fr_1fr] md:items-end">
             <h1 className="font-display text-[40px] leading-[44px] tracking-[-0.02em] md:text-[64px] md:leading-[66px]">
-              Finding the gap between what was asked and what the evidence shows
+              Bridging the gap between stakeholder expectations and user pain points
             </h1>
             <div>
               <p className="text-md text-ink-2">
-                The checklist takes about 3 minutes. The rest of the time goes to finding documents, catching mismatches and waiting on brokers, so that is
-                where this design works.
+                Owen asked for a faster, modern checklist. The evidence pointed somewhere else: the checklist takes 3 minutes, while finding documents,
+                catching mismatches and waiting on brokers take the rest of the week. Bind Desk leaves the checklist alone and works around it. It gathers
+                documents from every channel, highlights mismatches side by side and tracks broker follow-ups, with a person approving every decision that
+                matters.
               </p>
               <div className="mt-6 flex flex-wrap gap-2">
                 <button onClick={() => jump('video')} className="inline-flex h-10 items-center rounded-full border border-line-strong bg-surface px-4 font-medium transition-colors hover:border-ink-3 hover:bg-muted">
@@ -102,9 +105,19 @@ export default function Home() {
               </div>
             </div>
           </div>
-          <figure data-reveal className="mt-14 overflow-hidden rounded-panel border border-line bg-surface shadow-card">
-            <img src={imgReview} alt="The side-by-side review screen: the application and the certificate of insurance, with the each occurrence limit highlighted as $2,000,000 against $1,000,000." className="block w-full" />
-          </figure>
+          <div data-reveal className="mt-14">
+            <FrameLoop
+              to={`${PROTOTYPE_URL}?tour=1`}
+              linkLabel="Open the prototype: guided tour preview"
+              staticIndex={2}
+              frames={[
+                { src: imgCapture, label: 'Capture', alt: 'Capture panel over a webmail inbox: documents matched to applications, one at 40% confidence waiting for review.' },
+                { src: imgDashboard, label: 'Home', alt: 'Home: this week\u2019s open applications grouped by status, each with a next step and its link.' },
+                { src: imgReview, label: 'Review', alt: 'Application and certificate side by side, with the each occurrence limit highlighted as $2,000,000 against $1,000,000.' },
+                { src: imgBind, label: 'Bind', alt: 'Approve-and-bind dialog listing what was verified, with a required confirmation before binding.' },
+              ]}
+            />
+          </div>
         </section>
 
         {/* 2. Video */}
