@@ -506,20 +506,10 @@ function ChecklistSection({ sub }: { sub: Submission }) {
   const items = getChecklist(sub)
   const suggested = items.filter((c) => c.suggestion)
   const handled = suggested.filter((c) => suggestions[decisionKey(sub.id, c.id)]).length
-  const done = items.filter((c) => c.state === 'done' || suggestions[decisionKey(sub.id, c.id)] === 'accepted').length
 
   return (
     <section aria-label="Checklist">
-      <p className="mb-2 text-xs text-ink-3">Bindwise checklist, unchanged</p>
       <div data-decision="checklist" className="rounded-card border border-line bg-surface">
-        <div className="flex items-center justify-between border-b border-line px-5 py-3">
-          <p className="text-sm font-semibold">
-            <Counter value={done} /> of {items.length} complete
-          </p>
-          <div className="h-1.5 w-40 overflow-hidden rounded-full bg-muted">
-            <div className="h-full origin-left rounded-full bg-success transition-transform duration-300" style={{ transform: `scaleX(${done / items.length})` }} />
-          </div>
-        </div>
         <ul className="grid divide-y divide-line md:grid-cols-2 md:divide-y-0 md:[&>li]:border-b md:[&>li]:border-line md:[&>li:nth-child(odd)]:border-r">
           {items.map((c) => {
             const s = suggestions[decisionKey(sub.id, c.id)]
@@ -591,18 +581,59 @@ function ChecklistSection({ sub }: { sub: Submission }) {
 
 /* ------------------------------ Docs ------------------------------ */
 
-function DocPaper({ doc, side, sub, decisions, active, onHighlight }: { doc: SourceDoc; side: 'left' | 'right' | 'solo'; sub: Submission; decisions: Record<string, Decision>; active?: string | null; onHighlight?: (diffId: string) => void }) {
+function useWide() {
+  const q = '(min-width: 1280px)'
+  const [wide, setWide] = useState(() => window.matchMedia(q).matches)
+  useEffect(() => {
+    const mq = window.matchMedia(q)
+    const on = () => setWide(mq.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  return wide
+}
+
+function DocPaper({
+  doc,
+  side,
+  sub,
+  decisions,
+  active,
+  onHighlight,
+  collapsible = false,
+}: {
+  doc: SourceDoc
+  side: 'left' | 'right' | 'solo'
+  sub: Submission
+  decisions: Record<string, Decision>
+  active?: string | null
+  onHighlight?: (diffId: string) => void
+  /** Stacked layout: show the header only until clicked */
+  collapsible?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const shown = !collapsible || open
+  const head = (
+    <>
+      <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3">
+        <FileText aria-hidden size={12} /> {side === 'left' ? 'What the client asked for' : side === 'right' ? 'What arrived' : doc.kind}
+      </p>
+      <h3 className="mt-1 font-display text-xl leading-7">{doc.title}</h3>
+      <p className="text-xs text-ink-3">
+        {doc.source} · {doc.received}
+      </p>
+    </>
+  )
   return (
     <article data-doc={side} className="doc-paper rounded-card" aria-label={doc.title}>
-      <header className="border-b border-line px-5 pb-3 pt-4">
-        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3">
-          <FileText aria-hidden size={12} /> {side === 'left' ? 'What the client asked for' : side === 'right' ? 'What arrived' : doc.kind}
-        </p>
-        <h3 className="mt-1 font-display text-xl leading-7">{doc.title}</h3>
-        <p className="text-xs text-ink-3">
-          {doc.source} · {doc.received}
-        </p>
-      </header>
+      {collapsible ? (
+        <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className={`flex w-full items-start gap-3 px-5 pb-3 pt-4 text-left ${open ? 'border-b border-line' : ''}`}>
+          <span className="min-w-0 flex-1">{head}</span>
+          <ChevronDown aria-hidden size={18} className={`mt-1 shrink-0 text-ink-3 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+        </button>
+      ) : null}
+      {!collapsible && <header className="border-b border-line px-5 pb-3 pt-4">{head}</header>}
+      {shown && (
       <dl className="px-5 py-2">
         {doc.fields.map((f) => {
           const diff = side === 'solo' ? undefined : sub.diffs?.find((d) => (side === 'left' ? d.leftKey : d.rightKey) === f.key)
@@ -631,12 +662,14 @@ function DocPaper({ doc, side, sub, decisions, active, onHighlight }: { doc: Sou
           )
         })}
       </dl>
+      )}
     </article>
   )
 }
 
 function Compare({ sub }: { sub: Submission }) {
   const { decisions, epoch, focusDiff } = useProto()
+  const wide = useWide()
   const decide = useProto((s) => s.decide)
   const markReady = useProto((s) => s.markReady)
   const setFocusDiff = useProto((s) => s.setFocusDiff)
@@ -724,8 +757,8 @@ function Compare({ sub }: { sub: Submission }) {
     <div className="space-y-5">
       <div ref={area} data-enter className="relative grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_300px] xl:gap-x-10">
         <div data-decision="compare" className="contents">
-          <DocPaper doc={sub.application} side="left" sub={sub} decisions={decisions} active={active} onHighlight={bringToTop} />
-          <DocPaper doc={sub.counterDoc!} side="right" sub={sub} decisions={decisions} active={active} onHighlight={bringToTop} />
+          <DocPaper key={`l${wide}`} doc={sub.application} side="left" sub={sub} decisions={decisions} active={active} onHighlight={bringToTop} collapsible={!wide} />
+          <DocPaper key={`r${wide}`} doc={sub.counterDoc!} side="right" sub={sub} decisions={decisions} active={active} onHighlight={bringToTop} collapsible={!wide} />
         </div>
         <svg ref={svg} aria-hidden className="pointer-events-none absolute inset-0 hidden h-full w-full overflow-visible xl:block">
           {paths.map((p) => {
@@ -741,8 +774,8 @@ function Compare({ sub }: { sub: Submission }) {
         </svg>
 
         {/* Differences column */}
-        <aside data-decision="differences" aria-labelledby="diffs-title" className="self-start rounded-panel border border-line bg-surface shadow-card">
-          <div className="border-b border-line px-4 py-3">
+        <aside data-decision="differences" aria-labelledby="diffs-title" className="self-start">
+          <div className="pb-1">
             <h3 id="diffs-title" className="text-sm font-semibold">
               Differences
             </h3>
@@ -750,7 +783,7 @@ function Compare({ sub }: { sub: Submission }) {
               Reviewed <Counter value={reviewed} className="font-semibold text-ink" /> of {raw.length} · click a highlight to bring it here
             </p>
           </div>
-          <ul ref={list} className="space-y-2 p-3">
+          <ul ref={list} className="space-y-2 py-2">
             {diffs.map((d) => {
               const v = decisions[decisionKey(sub.id, d.id)]
               return (
@@ -792,7 +825,7 @@ function Compare({ sub }: { sub: Submission }) {
               )
             })}
           </ul>
-          <div data-decision="ai-tag" className="border-t border-line px-4 py-3">
+          <div data-decision="ai-tag" className="pt-1">
             <AiTag
               variant="Document intelligence"
               did="Compared 9 fields across 2 documents"
