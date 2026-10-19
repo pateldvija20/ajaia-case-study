@@ -37,6 +37,8 @@ export interface Scenario {
   title: string
   pain: string
   design: string
+  /** The human checkpoint. */
+  decide: string
   outcome: string
   /** Accessible name for the clip. */
   videoLabel: string
@@ -51,6 +53,7 @@ export const SCENARIOS: Scenario[] = [
     title: 'Every document in one place',
     pain: 'Documents arrive by portal, email and fax.',
     design: 'A browser panel matches each attachment to its application, replacing an 11-minute search where 17 of 54 arrive off-portal.',
+    decide: 'You confirm any match under 80% confidence.',
     outcome: 'The hunt becomes a list to confirm.',
     videoLabel: 'Video: the capture panel confirms a 40% match',
     assumes: 'This assumes off-portal documents land in a web inbox or portal the panel can read.',
@@ -61,6 +64,7 @@ export const SCENARIOS: Scenario[] = [
     title: 'See what’s stuck',
     pain: 'There’s no view of what’s waiting on a broker.',
     design: 'Home groups work by status and turns a row Overdue when its follow-up date passes, since brokers take a median 2.1 days and 9 took over 4.',
+    decide: 'You choose to chase, call or wait, and nothing sends on its own.',
     outcome: 'Stalled work shows up before day four.',
     videoLabel: 'Video: Harbor Line moves from Waiting to Overdue',
     assumes: 'This assumes one 2-day threshold fits most brokers.',
@@ -71,6 +75,7 @@ export const SCENARIOS: Scenario[] = [
     title: 'Catch mismatches side by side',
     pain: 'Mismatches are found only by careful reading.',
     design: 'Both documents sit side by side with each difference highlighted, and 35–38% of submissions have at least one.',
+    decide: 'You mark each difference real or acceptable, then edit the email before it’s sent.',
     outcome: 'The first flag and the broker email both come faster.',
     videoLabel: 'Video: a mismatch is marked real and the broker email is edited',
     assumes: 'This assumes every flagged difference needs a person and broker emails repeat.',
@@ -81,6 +86,7 @@ export const SCENARIOS: Scenario[] = [
     title: 'Fill a gap in place',
     pain: 'A missing document stalls the checklist.',
     design: 'The gap shows inside the checklist with suggested values, because one missing document blocks the bind.',
+    decide: 'You accept or dismiss each suggestion.',
     outcome: 'Autofill helps where it’s useful, and the checklist stays the same.',
     videoLabel: 'Video: one suggestion accepted, one dismissed',
   },
@@ -89,6 +95,7 @@ export const SCENARIOS: Scenario[] = [
     title: 'Bind with a final check',
     pain: 'Binding can’t be undone.',
     design: 'A summary of what was verified comes before approval, because a missed mismatch “comes back to bite us later.”',
+    decide: 'You confirm before the policy goes live.',
     outcome: 'The riskiest step gets the most deliberate check.',
     videoLabel: 'Video: a policy is approved and bound',
   },

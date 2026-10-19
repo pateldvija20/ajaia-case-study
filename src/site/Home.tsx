@@ -960,7 +960,9 @@ function ScenarioCard({ s, flip }: { s: Scenario; flip: boolean }) {
             <strong className="font-semibold text-ink">{s.pain}</strong>{" "}
             {s.design}
           </p>
-          <p>{s.outcome}</p>
+          <p>
+            <span className="font-medium text-ink">{s.decide}</span> {s.outcome}
+          </p>
           {s.assumes && (
             <p className="border-l-2 border-line-strong pl-3 text-sm text-ink-3">
               {s.assumes} {s.ifWrong}
