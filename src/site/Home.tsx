@@ -131,27 +131,19 @@ export default function Home() {
               label="Open the prototype: product walkthrough video"
               cta="Open the prototype"
               eager
+              ambient
             />
           </div>
         </section>
 
         {/* Walkthrough */}
-        <Section id="walkthrough" label="Walkthrough" title="The five-minute version" center>
+        <Section id="walkthrough" label="Walkthrough" title="The five-minute version" center tinted>
           <VideoBlock />
         </Section>
 
         {/* Task 1 */}
-        <Section id="problem" label="Task 1 · Identify the problem" title="A fast checklist inside a slow week" lede="Find where the time goes before designing anything.">
+        <Section id="problem" label="Task 1 · Identify the problem" title="A fast checklist inside a slow week" lede="At Marsh & Colby, a 40-person brokerage, assistants can’t bind a policy until every document is in and every coverage limit matches. Two interviews and 30 days of Bindwise logs show where their time goes.">
           <div className="space-y-24 md:space-y-32">
-            <Callout title="Context">
-              <p className="text-md text-ink-2">
-                Marsh &amp; Colby is a 40-person commercial insurance brokerage. Assistants can&rsquo;t bind a policy until every document is in and every
-                coverage limit matches.
-              </p>
-              <p className="mt-4 text-sm text-ink-3">
-                <span className="font-medium text-ink-2">Sources:</span> Two interviews (Anika Shah, Colin Doyle) and 30 days of Bindwise logs.
-              </p>
-            </Callout>
 
             <Sub title="Today’s journey" id="journey">
               <Journey />
@@ -351,15 +343,31 @@ export default function Home() {
 const OUTLINE_BTN =
   'inline-flex h-10 items-center gap-1 rounded-full border border-line-strong bg-transparent px-4 font-medium transition-colors hover:border-ink-3 hover:bg-muted'
 
-function Section({ id, label, title, lede, center = false, children }: { id: string; label: string; title: string; lede?: ReactNode; center?: boolean; children: ReactNode }) {
+function Section({
+  id,
+  label,
+  title,
+  lede,
+  center = false,
+  tinted = false,
+  children,
+}: {
+  id: string
+  label: string
+  title: string
+  lede?: ReactNode
+  center?: boolean
+  tinted?: boolean
+  children: ReactNode
+}) {
   return (
-    <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-16 border-t border-line">
+    <section id={id} aria-labelledby={`${id}-title`} className={`scroll-mt-16 border-t border-line ${tinted ? 'bg-muted' : ''}`}>
       <div className="mx-auto max-w-[1120px] px-4 py-16 md:px-8 md:py-24">
         <p className={`text-xs font-medium uppercase tracking-[0.08em] text-ink-3 ${center ? 'text-center' : ''}`}>{label}</p>
         <h2 id={`${id}-title`} data-reveal className={`mt-2 max-w-3xl ${center ? 'mx-auto text-center' : ''} font-display text-[30px] leading-9 tracking-[-0.01em] md:text-[40px] md:leading-[46px]`}>
           {title}
         </h2>
-        {lede && <p className="mt-3 max-w-2xl text-md text-ink-2">{lede}</p>}
+        {lede && <p className={`mt-3 max-w-2xl text-md text-ink-2 ${center ? 'mx-auto text-center' : ''}`}>{lede}</p>}
         <div className="mt-10 md:mt-16">{children}</div>
       </div>
     </section>
