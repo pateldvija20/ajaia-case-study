@@ -15,28 +15,24 @@ import {
   QUESTIONS,
   SCENARIOS,
   AI_USE,
-  YOUTUBE_URL,
+  EMAIL,
+  LINKEDIN_URL,
   type Scenario,
 } from './content'
 import { LoopVideo, posterOf } from './LoopVideo'
-import imgDashboard from './img/2a.jpg'
 
 gsap.registerPlugin(ScrollTrigger)
 
 const NAV = [
-  ['Walkthrough', 'walkthrough'],
   ['Problem', 'problem'],
   ['Design', 'design'],
   ['Why Ajaia', 'ajaia'],
   ['Questions', 'questions'],
   ['Next steps', 'next'],
+  ['About me', 'about'],
 ] as const
 
 const NAV_LINK = 'hidden rounded-full px-3 py-1.5 text-sm text-ink-2 transition-colors hover:bg-muted hover:text-ink lg:inline-flex'
-
-function youtubeId(url: string) {
-  return url.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/)?.[1] ?? null
-}
 
 function jump(id: string) {
   document.getElementById(id)?.scrollIntoView({
@@ -171,14 +167,14 @@ export default function Home() {
                 with a person approving each decision that matters.
               </p>
               <div className="mt-6 flex flex-wrap gap-2">
-                <button onClick={() => jump('walkthrough')} className={OUTLINE_BTN}>
-                  Watch the walkthrough
-                </button>
                 <Link
                   to={PROTOTYPE_URL}
                   className="inline-flex h-10 items-center rounded-full bg-primary px-4 font-medium text-white transition-colors hover:bg-primary-hover"
                 >
                   Open the prototype
+                </Link>
+                <Link to={`${PROTOTYPE_URL}?tour=1`} className={OUTLINE_BTN}>
+                  Start the guided tour
                 </Link>
               </div>
             </div>
@@ -196,10 +192,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Walkthrough */}
-        <Section id="walkthrough" label="Walkthrough" title="The five-minute version" center tinted>
-          <VideoBlock />
-        </Section>
 
         {/* Task 1 */}
         <Section
@@ -413,6 +405,48 @@ export default function Home() {
         >
           <PhaseCards items={NEXT_STEPS} label="Step" />
         </Section>
+
+        {/* About me, in place of the walkthrough video */}
+        <Section id="about" label="A note on the video" title="About me, in place of the video">
+          <p data-reveal className="max-w-2xl rounded-card bg-muted px-4 py-3 text-sm text-ink-2">
+            I ran out of time to record the video, so I put that time into this site. It covers what the video would have: the evidence, the design and my
+            answer to Owen&rsquo;s pushback. The rest is below.
+          </p>
+          <div className="mt-8 grid gap-4 md:grid-cols-2">
+            <AboutCard title="Who I am">
+              <p>
+                I&rsquo;m Dvija Patel, a product and UX designer in the Bay Area. I studied computer engineering, then earned an M.Des in human-computer
+                interaction at the University of Cincinnati. I observe like a researcher, solve like a designer and optimize like an engineer.
+              </p>
+              <p className="mt-3 flex flex-wrap gap-4 text-sm font-medium">
+                <a href={PORTFOLIO_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-ink underline underline-offset-2">
+                  Portfolio <ArrowUpRight aria-hidden size={14} />
+                </a>
+                <a href={LINKEDIN_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-ink underline underline-offset-2">
+                  LinkedIn <ArrowUpRight aria-hidden size={14} />
+                </a>
+              </p>
+            </AboutCard>
+            <AboutCard title="Why this role">
+              <Placeholder>Why this role</Placeholder>
+            </AboutCard>
+            <AboutCard title="Why Ajaia">
+              <p>
+                Ajaia builds AI into real workflows with a person approving the decisions that matter. That&rsquo;s the line this design holds.{' '}
+                <Placeholder>One personal reason</Placeholder>
+              </p>
+            </AboutCard>
+            <AboutCard title="Salary expectations">
+              <p>
+                Happy to share.{' '}
+                <a href={`mailto:${EMAIL}`} className="font-medium text-ink underline underline-offset-2">
+                  Contact me
+                </a>{' '}
+                to discuss.
+              </p>
+            </AboutCard>
+          </div>
+        </Section>
       </main>
 
       <footer className="mt-10 border-t border-line">
@@ -427,9 +461,6 @@ export default function Home() {
             <Link to={PROTOTYPE_URL} className="underline hover:text-ink">
               Prototype
             </Link>
-            <button onClick={() => jump('walkthrough')} className="underline hover:text-ink">
-              Walkthrough
-            </button>
             <a href={AJAIA_URL} target="_blank" rel="noreferrer" className="underline hover:text-ink">
               ajaia.ai
             </a>
@@ -504,40 +535,18 @@ function Sub({ title, id, children }: { title: string; id?: string; children: Re
   )
 }
 
-function VideoBlock() {
-  const id = youtubeId(YOUTUBE_URL)
+function AboutCard({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div data-reveal>
-      <div className="aspect-video w-full overflow-hidden rounded-panel border border-line bg-surface shadow-card">
-        {id ? (
-          <iframe
-            className="h-full w-full"
-            src={`https://www.youtube-nocookie.com/embed/${id}?rel=0`}
-            title="Walkthrough of the case study and prototype"
-            allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            loading="lazy"
-          />
-        ) : (
-          <div className="relative grid h-full place-items-center">
-            <img src={imgDashboard} alt="" className="absolute inset-0 h-full w-full object-cover object-top opacity-25" />
-            <p className="relative rounded-card border border-line bg-surface px-6 py-4 font-display text-2xl shadow-card">Video coming soon.</p>
-          </div>
-        )}
-      </div>
-      <div className="mt-6 flex justify-center">
-        {id ? (
-          <a href={YOUTUBE_URL} target="_blank" rel="noreferrer" className={OUTLINE_BTN}>
-            Watch on YouTube <ArrowUpRight aria-hidden size={15} />
-          </a>
-        ) : (
-          <Link to={`${PROTOTYPE_URL}?tour=1`} className={OUTLINE_BTN}>
-            Start the guided tour instead
-          </Link>
-        )}
-      </div>
+    <div data-reveal className="rounded-panel border border-line bg-surface p-5">
+      <h3 className="text-md font-semibold">{title}</h3>
+      <div className="mt-2 text-md text-ink-2">{children}</div>
     </div>
   )
+}
+
+/** A visibly marked gap for the author to fill in. */
+function Placeholder({ children }: { children: ReactNode }) {
+  return <span className="rounded-chip border border-dashed border-line-strong px-1.5 py-0.5 text-sm text-ink-3">[Placeholder: {children}]</span>
 }
 
 function ResponsiveTable({ head, rows }: { head: string[]; rows: ReactNode[][] }) {

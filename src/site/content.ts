@@ -1,8 +1,9 @@
-/* Edit these four links. YOUTUBE_URL accepts a watch, share or embed link. */
-export const YOUTUBE_URL = ''
+/* Edit these links. */
 export const PROTOTYPE_URL = '/prototype'
 export const AJAIA_URL = 'https://ajaia.ai'
 export const PORTFOLIO_URL = 'https://pateldvija20.vercel.app'
+export const LINKEDIN_URL = 'https://linkedin.com/in/pateldvija'
+export const EMAIL = 'pateldvija20@gmail.com'
 
 /* Page copy. Source of truth: case-study-content.md in the repo root. */
 
