@@ -52,7 +52,7 @@ export function AiTag({ variant, did, review, why, align = 'left' }: { variant: 
     }
     document.addEventListener('mousedown', onDoc)
     document.addEventListener('keydown', onKey)
-    if (pop.current && !prefersReduced()) gsap.fromTo(pop.current, { opacity: 0, y: -4 }, { opacity: 1, y: 0, duration: 0.18, ease: 'power2.out' })
+    if (pop.current && !prefersReduced()) gsap.fromTo(pop.current, { opacity: 0, y: -4 }, { opacity: 1, y: 0, duration: 0.2, ease: 'back.out(1.1)' })
     return () => {
       document.removeEventListener('mousedown', onDoc)
       document.removeEventListener('keydown', onKey)
@@ -61,7 +61,7 @@ export function AiTag({ variant, did, review, why, align = 'left' }: { variant: 
 
   useEffect(() => {
     if (prevReview.current !== review && pillRef.current && !prefersReduced()) {
-      gsap.fromTo(pillRef.current, { opacity: 0.2, scale: 0.92 }, { opacity: 1, scale: 1, duration: 0.2, ease: 'power2.out' })
+      gsap.fromTo(pillRef.current, { opacity: 0.2, scale: 0.92 }, { opacity: 1, scale: 1, duration: 0.22, ease: 'back.out(1.1)' })
     }
     prevReview.current = review
   }, [review])

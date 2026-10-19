@@ -14,7 +14,7 @@ export const SCENARIOS: { id: ScenarioId; label: string }[] = [
 ]
 
 const ctl =
-  'inline-flex h-8 items-center gap-1.5 rounded-full border border-white/20 px-3 text-sm text-white transition-colors hover:border-white/50 hover:bg-white/10 active:translate-y-px'
+  'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-white/20 px-3 text-sm text-white transition-colors hover:border-white/50 hover:bg-white/10 active:translate-y-px'
 
 export function DemoBar() {
   const { day, scenario, hint, tour } = useProto()
@@ -35,9 +35,9 @@ export function DemoBar() {
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 bg-primary px-4 py-2 text-white md:px-5">
         <p className="flex items-center gap-2 text-sm">
           <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-ink">Demo</span>
-          <span>Interactive prototype · fictional data · nothing is sent</span>
+          <span><span className="hidden sm:inline">Interactive prototype · </span>fictional data · nothing is sent</span>
         </p>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="-mx-4 flex w-[calc(100%+32px)] items-center gap-2 overflow-x-auto px-4 pb-0.5 sm:mx-0 sm:w-auto sm:flex-wrap sm:overflow-visible sm:p-0">
           <label className="sr-only" htmlFor="scenario">
             Scenario
           </label>

@@ -21,7 +21,7 @@ export function BindDialog({ sub, checks }: { sub: Submission; checks: string[] 
     () =>
       withMotion(() => {
         gsap.fromTo(scrim.current, { opacity: 0 }, { opacity: 1, duration: 0.25, ease: 'power2.out' })
-        gsap.fromTo(trap.current, { opacity: 0, scale: 0.96 }, { opacity: 1, scale: 1, duration: 0.3, ease: 'power3.out' })
+        gsap.fromTo(trap.current, { opacity: 0, scale: 0.96 }, { opacity: 1, scale: 1, duration: 0.32, ease: 'back.out(1.1)' })
       }),
     {},
   )

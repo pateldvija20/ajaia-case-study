@@ -26,7 +26,7 @@ export const TOUR: { frame: FrameId; look: string; evidence: string; checkpoint:
   {
     frame: '4a',
     look: 'Only what you marked real goes into the drafted email, with both values cited.',
-    evidence: 'Every flag ends in a broker email today, written by hand.',
+    evidence: 'Anika: "that can take days waiting on a reply." The email is where that wait starts.',
     checkpoint: 'You review and can edit before anything leaves the company.',
   },
   {
@@ -44,7 +44,7 @@ export const TOUR: { frame: FrameId; look: string; evidence: string; checkpoint:
   {
     frame: '5b',
     look: 'The follow-up is pre-drafted from the original request.',
-    evidence: 'Same wait, less writing.',
+    evidence: 'Median 2.1 days to a broker reply; nine submissions waited more than 4 days.',
     checkpoint: 'You send it, edit it, or pick another option.',
   },
   {

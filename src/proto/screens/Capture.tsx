@@ -236,19 +236,35 @@ function DocRow({ doc, resolved, subs, onConfirm }: { doc: CaptureDoc; resolved:
   const match = subs.find((s) => s.id === doc.matchId)
   const uncertain = doc.state === 'uncertain'
 
+  // Morph: old text leaves, the chip reshapes, new text enters ~80 ms into the reshape.
+  const [shown, setShown] = useState(resolved)
+  const oldWidth = useRef(0)
+  const matchTxt = useRef<HTMLSpanElement>(null)
+  const matchChip = useRef<HTMLSpanElement>(null)
   useEffect(() => {
-    if (!resolved || prefersReduced()) return
-    gsap.fromTo(chip.current, { opacity: 0, x: -4 }, { opacity: 1, x: 0, duration: 0.25, ease: 'power2.out' })
+    if (!resolved || shown) return
+    if (prefersReduced() || !matchTxt.current) return setShown(true)
+    oldWidth.current = matchChip.current?.offsetWidth ?? 0
+    gsap.to(matchTxt.current, { opacity: 0, duration: 0.1, ease: 'power2.in', onComplete: () => setShown(true) })
+  }, [resolved, shown])
+
+  useLayoutEffect(() => {
+    if (!shown || !oldWidth.current || prefersReduced() || !chip.current) return
+    const bg = chip.current.querySelector('[data-chip-bg]')
+    const txt = chip.current.querySelectorAll('[data-chip-txt]')
+    const newWidth = (bg as HTMLElement | null)?.offsetWidth || 1
+    gsap.fromTo(bg, { scaleX: oldWidth.current / newWidth }, { scaleX: 1, duration: 0.32, ease: 'back.out(1.1)', transformOrigin: 'left center' })
+    gsap.fromTo(txt, { opacity: 0 }, { opacity: 1, duration: 0.2, delay: 0.08, ease: 'power2.out' })
     if (uncertain && ring.current) {
       // One subtle pulse, then hold still until the user acts.
-      gsap.fromTo(ring.current, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: 'power2.out', yoyo: true, repeat: 1, delay: 0.15 })
+      gsap.fromTo(ring.current, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: 'power2.out', yoyo: true, repeat: 1, delay: 0.35 })
     }
-  }, [resolved, uncertain])
+  }, [shown, uncertain])
 
   return (
     <li
       data-doc-row={doc.id}
-      className={`relative rounded-card border p-3 ${uncertain && resolved ? 'border-warning-line bg-[#fffaf2]' : 'border-line bg-surface'}`}
+      className={`relative rounded-card border p-3 ${uncertain && shown ? 'border-warning-line bg-[#fffaf2]' : 'border-line bg-surface'}`}
     >
       <span ref={ring} aria-hidden className="pointer-events-none absolute -inset-[3px] rounded-[12px] border-2 border-warning opacity-0" />
       <div className="flex items-start gap-3">
@@ -259,20 +275,21 @@ function DocRow({ doc, resolved, subs, onConfirm }: { doc: CaptureDoc; resolved:
             <span className="font-medium text-ink-2">{doc.type}</span> · {doc.source} · {doc.from}
           </p>
           <div className="mt-2" aria-live="polite">
-            {!resolved ? (
-              <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-muted px-2 text-xs text-ink-3">
-                <Loader2 aria-hidden size={12} className="animate-spin motion-reduce:animate-none" /> Matching…
+            {!shown ? (
+              <span key="matching" ref={matchChip} className="inline-flex h-6 items-center gap-1.5 rounded-full bg-muted px-2 text-xs text-ink-3">
+                <span ref={matchTxt} className="inline-flex items-center gap-1.5">
+                  <Loader2 aria-hidden size={12} className="animate-spin motion-reduce:animate-none" /> Matching…
+                </span>
               </span>
             ) : (
-              <span ref={chip} className="flex flex-wrap items-center gap-1.5">
-                <span
-                  className={`inline-flex h-6 items-center gap-1 rounded-full border px-2 text-xs font-medium ${
-                    uncertain ? 'border-warning-line bg-warning-bg text-warning' : 'border-line bg-muted text-ink'
-                  }`}
-                >
-                  {uncertain ? 'Possible match:' : '→'} {match?.client}
+              <span key="matched" ref={chip} className="flex flex-wrap items-center gap-1.5">
+                <span className={`relative inline-flex h-6 items-center gap-1 px-2 text-xs font-medium ${uncertain ? 'text-warning' : 'text-ink'}`}>
+                  <span data-chip-bg aria-hidden className={`absolute inset-0 rounded-full border ${uncertain ? 'border-warning-line bg-warning-bg' : 'border-line bg-muted'}`} />
+                  <span data-chip-txt className="relative">
+                    {uncertain ? 'Possible match:' : '→'} {match?.client}
+                  </span>
                 </span>
-                <span className="text-xs text-ink-3">
+                <span data-chip-txt className="text-xs text-ink-3">
                   {doc.state === 'confirmed' || doc.state === 'reassigned'
                     ? doc.state === 'confirmed'
                       ? 'Confirmed by you'
@@ -282,7 +299,7 @@ function DocRow({ doc, resolved, subs, onConfirm }: { doc: CaptureDoc; resolved:
               </span>
             )}
           </div>
-          {resolved && uncertain && !picking && (
+          {shown && uncertain && !picking && (
             <div className="mt-2.5">
               <p className="text-xs text-ink-2">
                 "HL" could be Harborview Freight Co. or Harbor Line Logistics. Which submission is this for?

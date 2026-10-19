@@ -668,7 +668,7 @@ function ReadyView({ sub }: { sub: Submission }) {
             <tr className="border-b border-line text-left text-xs text-ink-3">
               <th scope="col" className="py-2 font-medium">Limit</th>
               <th scope="col" className="py-2 text-right font-medium">Application</th>
-              <th scope="col" className="py-2 text-right font-medium">Certificate</th>
+              <th scope="col" className="hidden py-2 text-right font-medium sm:table-cell">Certificate</th>
               <th scope="col" className="py-2 text-right font-medium">
                 <span className="sr-only">Result</span>
               </th>
@@ -679,7 +679,7 @@ function ReadyView({ sub }: { sub: Submission }) {
               <tr key={f.key} className="border-b border-dashed border-line last:border-0">
                 <td className="py-2 text-ink-2">{f.label}</td>
                 <td className="py-2 text-right font-mono text-[13px]">{f.value}</td>
-                <td className="py-2 text-right font-mono text-[13px]">{f.value}</td>
+                <td className="hidden py-2 text-right font-mono text-[13px] sm:table-cell">{f.value}</td>
                 <td className="w-20 py-2 text-right text-xs font-medium text-success">
                   <Check aria-hidden size={12} className="mr-1 inline" />
                   Match

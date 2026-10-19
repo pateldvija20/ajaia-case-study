@@ -4,7 +4,7 @@ import { useProto } from '../store'
 import { daysWaiting, fmtDay, isOverdue, sortByUrgency } from '../logic'
 import { EVIDENCE, WEEK_LABEL } from '../mockData'
 import { flipBus } from '../flipBus'
-import { Flip, gsap, prefersReduced, useGSAP, withMotion } from '../motion'
+import { Flip, gsap, prefersReduced, useGSAP, useIndicator, withMotion } from '../motion'
 import { StatusBadge } from '../components/StatusBadge'
 import { AiTag } from '../components/AiTag'
 import { Button, Counter, WhyDesign } from '../components/ui'
@@ -31,6 +31,8 @@ export function Dashboard() {
   const narrow = useMediaQuery('(max-width: 767px)')
   const root = useRef<HTMLDivElement>(null)
   const flipState = useRef<Flip.FlipState | null>(null)
+  const tabsRef = useRef<HTMLDivElement>(null)
+  useIndicator(tabsRef, tab)
 
   // While a move is pending, show the row as it was so the change can play out in place.
   const display = useMemo(
@@ -115,7 +117,22 @@ export function Dashboard() {
       withMotion(() => {
         gsap.from('[data-enter]', { opacity: 0, y: 6, duration: 0.35, stagger: 0.04, ease: 'power3.out' })
       }),
-    { scope: root, revertOnUpdate: true, dependencies: [epoch, tab] },
+    { scope: root, revertOnUpdate: true, dependencies: [epoch] },
+  )
+
+  // Switching tabs: only the rows enter; the page chrome stays put.
+  const firstTab = useRef(true)
+  useGSAP(
+    () => {
+      if (firstTab.current) {
+        firstTab.current = false
+        return
+      }
+      withMotion(() => {
+        gsap.from('[data-row-list] [data-enter]', { opacity: 0, y: 4, duration: 0.25, stagger: 0.03, ease: 'power3.out', delay: 0.06 })
+      })
+    },
+    { scope: root, revertOnUpdate: true, dependencies: [tab] },
   )
 
   const setTab = (t: 'week' | 'past') => go({ name: 'dashboard', tab: t })
@@ -160,16 +177,16 @@ export function Dashboard() {
 
       {/* Tabs */}
       <div data-enter className="mt-6 flex flex-wrap items-center justify-between gap-3 border-b border-line">
-        <div role="tablist" aria-label="Submissions" className="flex gap-5">
+        <div ref={tabsRef} role="tablist" aria-label="Submissions" className="relative flex gap-5">
+          <span data-indicator aria-hidden className="absolute bottom-[-1px] left-0 h-0.5 w-px origin-left bg-ink opacity-0" />
           {(['week', 'past'] as const).map((t) => (
             <button
               key={t}
               role="tab"
+              data-active={tab === t}
               aria-selected={tab === t}
               onClick={() => setTab(t)}
-              className={`-mb-px flex items-center gap-1.5 border-b-2 pb-2.5 pt-1 text-base font-medium transition-colors ${
-                tab === t ? 'border-ink text-ink' : 'border-transparent text-ink-3 hover:text-ink'
-              }`}
+              className={`flex items-center gap-1.5 pb-2.5 pt-1 text-base font-medium transition-colors ${tab === t ? 'text-ink' : 'text-ink-3 hover:text-ink'}`}
             >
               {t === 'week' ? 'This week' : 'Past'}
               <span className="rounded-full bg-muted px-1.5 text-xs tabular-nums text-ink-2">
@@ -195,6 +212,7 @@ export function Dashboard() {
         )}
       </div>
 
+      <div data-row-list>
       {tab === 'week' ? (
         <>
           {narrow ? <MobileList rows={current} /> : <SubTable rows={current} caption="This week, most urgent first" />}
@@ -209,6 +227,7 @@ export function Dashboard() {
       ) : (
         <PastTable rows={past} />
       )}
+      </div>
 
       <div className="mt-8 max-w-xl">
         <WhyDesign evidence={[EVIDENCE.waiting, EVIDENCE.carefully]}>
