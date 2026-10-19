@@ -245,7 +245,7 @@ function DocRow({
   const match = subs.find((s) => s.id === doc.matchId)
   const uncertain = doc.state === 'uncertain'
   const settled = doc.state === 'confirmed' || doc.state === 'reassigned'
-  const expanded = uncertain || picking || (previewing && !settled)
+  const expanded = picking || (previewing && !settled)
 
   // Morph: old text leaves, the chip reshapes, new text enters ~80 ms into the reshape.
   const [shown, setShown] = useState(resolved)
@@ -276,7 +276,7 @@ function DocRow({
     <li
       data-doc-row={doc.id}
       data-decision={uncertain ? 'low-confidence' : undefined}
-      className={`relative rounded-card border bg-surface p-3 transition-colors ${previewing ? 'border-ink ring-1 ring-ink' : 'border-line hover:border-line-strong'}`}
+      className={`relative rounded-card border p-3 transition-colors ${previewing ? 'border-ink ring-1 ring-ink' : uncertain && shown ? 'border-warning-line' : 'border-line hover:border-line-strong'} ${uncertain && shown ? 'bg-[#fffaf2]' : 'bg-surface'}`}
     >
       <span ref={ring} aria-hidden className="pointer-events-none absolute -inset-[3px] rounded-[12px] border-2 border-ink opacity-0" />
       <div className="flex items-start gap-3">
@@ -318,7 +318,7 @@ function DocRow({
           </div>
           {shown && !expanded && (
             <button onClick={() => setPicking(true)} className="mt-1.5 text-xs text-ink-3 underline underline-offset-2 hover:text-ink">
-              Change application
+              {uncertain ? 'Review match' : 'Change application'}
             </button>
           )}
           {shown && expanded && (
@@ -357,7 +357,7 @@ function DocRow({
                 >
                   Confirm
                 </Button>
-                {picking && !uncertain && !previewing && (
+                {picking && !previewing && (
                   <Button variant="ghost" onClick={() => setPicking(false)}>
                     Cancel
                   </Button>

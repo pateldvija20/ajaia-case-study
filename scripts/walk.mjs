@@ -91,6 +91,7 @@ await page.close()
 // C: capture → change the 40% match → preview → upload scan
 page = await fresh('#/prototype?scenario=C')
 await page.waitForTimeout(2200)
+await page.locator('[data-doc-row="d3"]').getByRole('button', { name: 'Review match' }).click()
 await page.locator('#app-d3').selectOption('harbor')
 await page.locator('[data-doc-row="d3"]').getByRole('button', { name: 'Confirm' }).click()
 await see(page, 'Reassigned by you')
