@@ -211,7 +211,7 @@ export default function Home() {
               <Journey />
             </Sub>
 
-            <Callout title="The problem">
+            <Callout title="The problem" left>
               <p className="text-md text-ink-2">
                 <strong className="font-semibold text-ink">The checklist is the fastest step.</strong> Finding documents and spotting mismatches take longer,
                 and broker replies take days. About one in three submissions has a mismatch.
@@ -482,11 +482,11 @@ function Section({
   )
 }
 
-function Callout({ title, children, footer }: { title: string; children: ReactNode; footer?: ReactNode }) {
+function Callout({ title, children, footer, left = false }: { title: string; children: ReactNode; footer?: ReactNode; left?: boolean }) {
   return (
-    <div data-reveal className="rounded-panel border border-line bg-surface px-6 py-7 text-center md:px-12 md:py-8">
+    <div data-reveal className={`rounded-panel border border-line bg-surface px-6 py-7 md:px-12 md:py-8 ${left ? 'text-left' : 'text-center'}`}>
       <h3 className="font-display text-[24px] leading-8 md:text-[28px] md:leading-9">{title}</h3>
-      <div className="mx-auto mt-3 max-w-2xl">{children}</div>
+      <div className={`mt-3 max-w-2xl ${left ? '' : 'mx-auto'}`}>{children}</div>
       {footer}
     </div>
   )
