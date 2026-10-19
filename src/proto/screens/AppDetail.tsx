@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   ArrowLeft,
   Check,
@@ -9,8 +9,8 @@ import {
   Hourglass,
   Info,
   Mail,
-  PanelLeftClose,
-  PanelLeftOpen,
+  Briefcase,
+  UserRound,
   Phone,
   Stamp,
   Timer,
@@ -69,45 +69,21 @@ function useSectionStates(sub: Submission) {
   }, [sub, day, decisions, suggestions])
 }
 
-function scrollToSection(id: AppSection, smooth = true) {
-  document.getElementById(`sec-${id}`)?.scrollIntoView({ behavior: smooth && !prefersReduced() ? 'smooth' : 'auto', block: 'start' })
-}
 
 export function AppDetail({ id }: { id: string }) {
   const sub = useProto((s) => s.subs.find((x) => x.id === id))!
   const { screen, epoch, docsTab, bindDialog } = useProto()
   const go = useProto((s) => s.go)
+  const openApp = useProto((s) => s.openApp)
   const states = useSectionStates(sub)
   const root = useRef<HTMLDivElement>(null)
-  const [active, setActive] = useState<AppSection>('status')
+  const panel = useRef<HTMLDivElement>(null)
   const tab = docsTab[id] ?? (sub.diffs && sub.status === 'mismatch' ? 'compare' : 'all')
-  const autoCollapse = sub.status === 'mismatch' && tab === 'compare'
-  const [collapsed, setCollapsed] = useState(autoCollapse)
-  useEffect(() => setCollapsed(autoCollapse), [autoCollapse])
 
-  // Land on the requested section.
-  const initial = screen.name === 'app' ? screen.section : undefined
-  useLayoutEffect(() => {
-    if (initial && initial !== 'status') scrollToSection(initial, false)
-  }, [initial, epoch])
-
-  // Scrollspy for the section tabs.
-  useEffect(() => {
-    const scroller = document.getElementById('app-scroll')
-    if (!scroller) return
-    const io = new IntersectionObserver(
-      (entries) => {
-        const vis = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
-        if (vis[0]) setActive(vis[0].target.id.replace('sec-', '') as AppSection)
-      },
-      { root: scroller, rootMargin: '0px 0px -65% 0px' },
-    )
-    SECTIONS.forEach((s) => {
-      const el = document.getElementById(`sec-${s.id}`)
-      if (el) io.observe(el)
-    })
-    return () => io.disconnect()
-  }, [])
+  // One section at a time. Default to the section the status points at.
+  const fallback: AppSection = sub.status === 'mismatch' ? 'docs' : sub.status === 'missing' ? 'checklist' : sub.status === 'waiting' ? 'followup' : 'bind'
+  const requested = screen.name === 'app' ? screen.section : undefined
+  const active: AppSection = requested && requested !== 'status' ? requested : fallback
 
   useGSAP(
     () =>
@@ -116,76 +92,33 @@ export function AppDetail({ id }: { id: string }) {
       }),
     { scope: root, revertOnUpdate: true, dependencies: [id, epoch] },
   )
+  // Switching tabs: the new section enters; the header stays put.
+  const firstTab = useRef(true)
+  useGSAP(
+    () => {
+      if (firstTab.current) {
+        firstTab.current = false
+        return
+      }
+      withMotion(() => void gsap.from(panel.current, { opacity: 0, y: 6, duration: 0.28, ease: 'power3.out' }))
+    },
+    { revertOnUpdate: true, dependencies: [active] },
+  )
 
   return (
-    <div ref={root} className="flex h-full">
-      {/* Section tabs replace the app side panel inside an application */}
-      <nav
-        aria-label="Application sections"
-        className={`hidden shrink-0 flex-col border-r border-line bg-muted/60 transition-[width] duration-200 md:flex ${collapsed ? 'w-14' : 'w-56'}`}
-      >
-        <div className={`flex items-center gap-1 pb-3 pt-4 ${collapsed ? 'flex-col px-2' : 'justify-between px-3'}`}>
-          <button onClick={() => go({ name: 'home' })} className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-sm text-ink-2 hover:bg-sunken hover:text-ink" title="Back to Home">
-            <ArrowLeft aria-hidden size={15} />
-            {!collapsed && 'Home'}
+    <div ref={root} className="h-full">
+      <div id="app-scroll" className="relative h-full overflow-auto">
+        <div className="mx-auto w-full max-w-[1240px] px-4 pb-14 pt-5 md:px-8">
+          <button onClick={() => go({ name: 'home' })} className="inline-flex items-center gap-1 rounded-md text-sm text-ink-2 hover:text-ink">
+            <ArrowLeft aria-hidden size={15} /> Open applications
           </button>
-          <button
-            onClick={() => setCollapsed((c) => !c)}
-            aria-label={collapsed ? 'Expand sections panel' : 'Collapse sections panel'}
-            className="grid h-7 w-7 place-items-center rounded-md text-ink-3 hover:bg-sunken hover:text-ink"
-          >
-            {collapsed ? <PanelLeftOpen aria-hidden size={15} /> : <PanelLeftClose aria-hidden size={15} />}
-          </button>
-        </div>
-        {!collapsed && <p className="truncate px-4 pb-2 text-xs font-semibold text-ink-3">{sub.client}</p>}
-        <ul className="flex flex-col gap-0.5 px-2">
-          {SECTIONS.map((s) => {
-            const [word, tone] = states[s.id]
-            const on = active === s.id
-            return (
-              <li key={s.id}>
-                <button
-                  onClick={() => scrollToSection(s.id)}
-                  aria-current={on ? 'true' : undefined}
-                  title={collapsed ? `${s.label}: ${word}` : undefined}
-                  className={`flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm transition-colors ${on ? 'bg-sunken font-semibold text-ink' : 'text-ink-2 hover:bg-sunken/70 hover:text-ink'} ${collapsed ? 'justify-center' : ''}`}
-                >
-                  <span className="relative">
-                    <s.icon aria-hidden size={16} />
-                    {collapsed && tone !== 'idle' && tone !== 'done' && <span aria-hidden className={`absolute -right-1 -top-1 h-2 w-2 rounded-full ${tone === 'alert' ? 'bg-danger' : 'bg-warning'}`} />}
-                  </span>
-                  {!collapsed && (
-                    <>
-                      {s.label}
-                      <span className={`ml-auto rounded-full border px-1.5 text-[11px] font-medium ${TONE[tone]}`}>{word}</span>
-                    </>
-                  )}
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-      </nav>
-
-      <div id="app-scroll" className="relative min-w-0 flex-1 overflow-auto">
-        {/* Narrow screens: sections as a horizontal bar */}
-        <div className="sticky top-0 z-20 flex gap-1 overflow-x-auto border-b border-line bg-surface px-3 py-2 md:hidden">
-          <button onClick={() => go({ name: 'home' })} aria-label="Back to Home" className="grid h-8 w-8 shrink-0 place-items-center rounded-full hover:bg-muted">
-            <ArrowLeft aria-hidden size={15} />
-          </button>
-          {SECTIONS.map((s) => (
-            <button key={s.id} onClick={() => scrollToSection(s.id)} className={`shrink-0 rounded-full px-3 py-1.5 text-sm ${active === s.id ? 'bg-ink text-white' : 'text-ink-2 hover:bg-muted'}`}>
-              {s.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="mx-auto w-full max-w-[1240px] space-y-12 px-4 pb-14 pt-6 md:px-8">
-          <StatusSection sub={sub} states={states} />
-          <ChecklistSection sub={sub} />
-          <DocsSection sub={sub} tab={tab} />
-          <FollowUpSection sub={sub} />
-          <BindSection sub={sub} />
+          <StatusSection sub={sub} states={states} active={active} onTab={(s) => openApp(sub.id, s)} />
+          <div ref={panel} role="tabpanel" id={`panel-${active}`} aria-labelledby={`tab-${active}`} className="mt-8">
+            {active === 'checklist' && <ChecklistSection sub={sub} />}
+            {active === 'docs' && <DocsSection sub={sub} tab={tab} />}
+            {active === 'followup' && <FollowUpSection sub={sub} />}
+            {active === 'bind' && <BindSection sub={sub} />}
+          </div>
         </div>
         <ProtoFooter />
       </div>
@@ -196,7 +129,7 @@ export function AppDetail({ id }: { id: string }) {
 
 function SectionHead({ id, title, note }: { id: AppSection; title: string; note?: string }) {
   return (
-    <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 border-b border-line pb-2">
+    <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
       <h2 id={`h-${id}`} className="font-display text-[24px] leading-8">
         {title}
       </h2>
@@ -207,62 +140,112 @@ function SectionHead({ id, title, note }: { id: AppSection; title: string; note?
 
 /* ------------------------------ Status ------------------------------ */
 
-function StatusSection({ sub, states }: { sub: Submission; states: ReturnType<typeof useSectionStates> }) {
+/** Client information grouped into three tinted tiles so each kind of fact has a fixed place. */
+function ClientInfo({ sub }: { sub: Submission }) {
+  const groups: { title: string; icon: typeof Info; tint: string; iconTint: string; rows: [string, ReactNode][] }[] = [
+    {
+      title: 'Policy',
+      icon: FileText,
+      tint: 'bg-info-bg/60 border-info-line',
+      iconTint: 'bg-info text-white',
+      rows: [
+        ['Line', sub.line],
+        ['Policy number', <span key="p" className="font-mono">{sub.policyNo}</span>],
+        ['Effective', sub.effective],
+      ],
+    },
+    {
+      title: 'Broker',
+      icon: Briefcase,
+      tint: 'bg-warning-bg/60 border-warning-line',
+      iconTint: 'bg-warning text-white',
+      rows: [
+        ['Name', `${sub.broker.name}, ${sub.broker.firm}`],
+        ['Email', sub.broker.email],
+        ['Phone', sub.broker.phone],
+      ],
+    },
+    {
+      title: 'Handling',
+      icon: UserRound,
+      tint: 'bg-success-bg/60 border-success-line',
+      iconTint: 'bg-success text-white',
+      rows: [
+        ['Received', sub.received],
+        ['Assigned to', USER.name],
+        ['Follow up after', `${sub.followUpDays} day${sub.followUpDays > 1 ? 's' : ''} without a reply`],
+      ],
+    },
+  ]
+  return (
+    <div data-enter className="mt-4 grid gap-3 md:grid-cols-3">
+      {groups.map((g) => (
+        <section key={g.title} aria-label={g.title} className={`rounded-card border px-4 py-3 ${g.tint}`}>
+          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-ink-2">
+            <span aria-hidden className={`grid h-5 w-5 place-items-center rounded-md ${g.iconTint}`}>
+              <g.icon size={12} strokeWidth={2.25} />
+            </span>
+            {g.title}
+          </p>
+          <dl className="mt-2 space-y-1.5 text-sm">
+            {g.rows.map(([k, v]) => (
+              <div key={k} className="grid grid-cols-[96px_minmax(0,1fr)] gap-2">
+                <dt className="text-ink-3">{k}</dt>
+                <dd className="min-w-0 break-words text-ink">{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      ))}
+    </div>
+  )
+}
+
+function StatusSection({ sub, states, active, onTab }: { sub: Submission; states: ReturnType<typeof useSectionStates>; active: AppSection; onTab: (s: AppSection) => void }) {
   const day = useProto((s) => s.day)
-  const barRef = useRef<HTMLOListElement>(null)
   const steps: AppSection[] = ['checklist', 'docs', 'followup', 'bind']
   return (
-    <section id="sec-status" aria-labelledby="h-status" className="scroll-mt-16 md:scroll-mt-4">
+    <section id="sec-status" aria-labelledby="h-status" className="mt-3">
       <header data-enter className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 id="h-status" className="font-display text-[32px] leading-10 tracking-[-0.01em]">
-            {sub.client}
-          </h1>
-          <p className="text-sm text-ink-3">
-            {sub.line} · <span className="whitespace-nowrap font-mono">{sub.policyNo}</span> · effective {sub.effective}
-          </p>
-        </div>
+        <h1 id="h-status" className="font-display text-[32px] leading-10 tracking-[-0.01em]">
+          {sub.client}
+        </h1>
         <StatusBadge status={states.st} days={daysWaiting(sub, day)} />
       </header>
 
-      <dl data-enter className="mt-4 grid gap-px overflow-hidden rounded-card border border-line bg-line text-sm sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          ['Received', sub.received],
-          ['Broker', `${sub.broker.name}, ${sub.broker.firm}`],
-          ['Contact', `${sub.broker.email}`],
-          ['Assigned to', USER.name],
-        ].map(([k, v]) => (
-          <div key={k} className="min-w-0 bg-surface px-4 py-2.5">
-            <dt className="text-xs text-ink-3">{k}</dt>
-            <dd className="truncate">{v}</dd>
-          </div>
-        ))}
-      </dl>
+      <ClientInfo sub={sub} />
 
-      {/* Status bar: one step per section, click to jump */}
-      <ol ref={barRef} data-enter aria-label="Application status" className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {steps.map((s) => {
-          const [word, tone] = states[s]
-          const label = SECTIONS.find((x) => x.id === s)!.label
-          return (
-            <li key={s}>
-              <button
-                onClick={() => scrollToSection(s)}
-                className={`flex w-full items-center gap-2 rounded-card border px-3 py-2.5 text-left transition-[transform,box-shadow] duration-150 hover:shadow-card active:translate-y-px ${TONE[tone]}`}
-              >
-                {tone === 'done' ? <Check aria-hidden size={15} strokeWidth={2.5} /> : tone === 'alert' ? <X aria-hidden size={15} strokeWidth={2.5} /> : tone === 'todo' ? <CircleDashed aria-hidden size={15} strokeWidth={2.25} /> : <Hourglass aria-hidden size={15} />}
-                <span className="min-w-0">
-                  <span className="block text-xs opacity-80">{label}</span>
-                  <span className="block truncate text-sm font-semibold">{word}</span>
-                </span>
-              </button>
-            </li>
-          )
-        })}
-      </ol>
       <div data-enter data-decision="next-step" className="mt-4 rounded-card bg-surface px-4 py-3 text-[15px] leading-6 text-ink-2 shadow-card ring-1 ring-line">
         <span className="mb-0.5 block text-xs font-semibold uppercase tracking-[0.08em] text-ink-3">Next step</span>
         <NextStep sub={sub} />
+      </div>
+
+      {/* Status cards double as the section tabs */}
+      <div data-enter role="tablist" aria-label="Application sections" className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {steps.map((s) => {
+          const [word, tone] = states[s]
+          const label = SECTIONS.find((x) => x.id === s)!.label
+          const on = active === s
+          return (
+            <button
+              key={s}
+              role="tab"
+              id={`tab-${s}`}
+              aria-selected={on}
+              aria-controls={`panel-${s}`}
+              onClick={() => onTab(s)}
+              className={`relative flex w-full items-center gap-2 rounded-card border px-3 py-2.5 text-left transition-[transform,box-shadow] duration-150 active:translate-y-px ${TONE[tone]} ${
+                on ? 'shadow-card ring-2 ring-ink ring-offset-2 ring-offset-canvas' : 'opacity-80 hover:opacity-100 hover:shadow-card'
+              }`}
+            >
+              {tone === 'done' ? <Check aria-hidden size={15} strokeWidth={2.5} /> : tone === 'alert' ? <X aria-hidden size={15} strokeWidth={2.5} /> : tone === 'todo' ? <CircleDashed aria-hidden size={15} strokeWidth={2.25} /> : <Hourglass aria-hidden size={15} />}
+              <span className="min-w-0">
+                <span className="block text-xs opacity-80">{label}</span>
+                <span className="block truncate text-sm font-semibold">{word}</span>
+              </span>
+            </button>
+          )
+        })}
       </div>
     </section>
   )
@@ -282,7 +265,7 @@ function ChecklistSection({ sub }: { sub: Submission }) {
   const done = items.filter((c) => c.state === 'done' || suggestions[decisionKey(sub.id, c.id)] === 'accepted').length
 
   return (
-    <section id="sec-checklist" aria-labelledby="h-checklist" className="scroll-mt-16 md:scroll-mt-4">
+    <section id="sec-checklist" aria-labelledby="h-checklist">
       <SectionHead id="checklist" title="Checklist" note="Bindwise checklist, unchanged" />
       <div data-decision="checklist" className="rounded-panel border border-line bg-surface shadow-card">
         <div className="flex items-center justify-between border-b border-line px-5 py-3">
@@ -367,7 +350,7 @@ function ChecklistSection({ sub }: { sub: Submission }) {
             onChange={(t) => setDraft(sub.id, t)}
             onSend={() => {
               sendRequest(sub.id)
-              requestAnimationFrame(() => scrollToSection('followup'))
+              useProto.getState().openApp(sub.id, 'followup')
             }}
             sendLabel={`Send to ${sub.broker.name.split(' ')[0]}`}
             title="Request for the missing document"
@@ -388,7 +371,7 @@ function DocsSection({ sub, tab }: { sub: Submission; tab: 'compare' | 'all' }) 
   useIndicator(tabsRef, tab)
   const canCompare = Boolean(sub.diffs && sub.counterDoc)
   return (
-    <section id="sec-docs" aria-labelledby="h-docs" className="scroll-mt-16 md:scroll-mt-4">
+    <section id="sec-docs" aria-labelledby="h-docs">
       <SectionHead id="docs" title="Documents" note={`${sub.documents.length} on file`} />
       <div ref={tabsRef} role="tablist" aria-label="Documents view" className="relative mb-4 flex gap-5 border-b border-line">
         <span data-indicator aria-hidden className="absolute bottom-[-1px] left-0 h-0.5 w-px origin-left bg-ink opacity-0" />
@@ -638,7 +621,7 @@ function Compare({ sub }: { sub: Submission }) {
             onChange={(t) => setDraft(sub.id, t)}
             onSend={() => {
               sendRequest(sub.id)
-              requestAnimationFrame(() => scrollToSection('followup'))
+              useProto.getState().openApp(sub.id, 'followup')
             }}
             sendLabel={`Send to ${sub.broker.name.split(' ')[0]}`}
             evidence={raw.filter((d) => decisions[decisionKey(sub.id, d.id)] === 'real').map((d) => `${d.field}: ${d.right} (certificate) vs ${d.left} (application)`)}
@@ -652,7 +635,7 @@ function Compare({ sub }: { sub: Submission }) {
             variant="primary"
             onClick={() => {
               markReady(sub.id)
-              requestAnimationFrame(() => scrollToSection('bind'))
+              useProto.getState().openApp(sub.id, 'bind')
             }}
           >
             Mark ready
@@ -747,7 +730,7 @@ function FollowUpSection({ sub }: { sub: Submission }) {
   const first = sub.broker.name.split(' ')[0]
 
   return (
-    <section id="sec-followup" aria-labelledby="h-followup" className="scroll-mt-16 md:scroll-mt-4">
+    <section id="sec-followup" aria-labelledby="h-followup">
       <SectionHead id="followup" title="Follow-up" />
       <div data-decision="followup" className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-panel border border-line bg-surface px-5 py-3 shadow-card">
@@ -891,7 +874,7 @@ function BindSection({ sub }: { sub: Submission }) {
   const limits = sub.application.fields.filter((f) => f.value.startsWith('$'))
   const open = getChecklist(sub).filter((c) => c.state !== 'done')
   return (
-    <section id="sec-bind" aria-labelledby="h-bind" className="scroll-mt-16 md:scroll-mt-4">
+    <section id="sec-bind" aria-labelledby="h-bind">
       <SectionHead id="bind" title="Final review and bind" />
       <div data-decision="bind">
         {!ready && !bound ? (

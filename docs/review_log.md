@@ -85,3 +85,9 @@ Three worst problems found and fixed:
 1. The Guided tour button collapsed to a sliver in the panel's column layout (`flex-1` with no height basis). It now keeps its 40 px height.
 2. The Home design decision still said "Grouped by", which no longer matched. It now describes the status tabs.
 3. Closed rows read "Bound Tue 14 Apr. Bound with no differences found." The message now says it once: "Bound with no differences found on Tue 14 Apr."
+
+## Round 6 (application tabs, colored groups, date controls)
+
+Changes from the author: All applications drops the status column and colors each status group row instead; Home keeps its table and gains status-colored dots on its tabs. The application screen loses its side panel; the four status cards (Checklist, Docs, Follow-up, Bind) are now tabs that show one section at a time, under a back link, the client name, three tinted client-information tiles (Policy, Broker, Handling) and the next step. The date sits outside a box as three outlined controls.
+
+Scores held at 8 across the five criteria. Fixes made while checking: next-step links no longer break mid-label (`whitespace-nowrap`), tab switches animate only the incoming section, and the date drops the year so it fits its box.

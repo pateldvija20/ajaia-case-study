@@ -78,7 +78,8 @@ function WindowPanel() {
     if (dayRef.current && !prefersReduced()) gsap.fromTo(dayRef.current, { y: dir * -8, opacity: 0 }, { y: 0, opacity: 1, duration: 0.28, ease: 'power3.out' })
   }
 
-  const ctl = 'grid h-8 w-8 shrink-0 place-items-center rounded-full text-white transition-colors hover:bg-white/10 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent'
+  const ctl =
+    'grid h-10 w-10 place-items-center rounded-card border border-white/25 text-white transition-colors hover:border-white/60 hover:bg-white/10 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:border-white/25 disabled:hover:bg-transparent'
 
   return (
     <aside aria-label="Prototype controls" className="flex shrink-0 flex-col gap-4 bg-primary px-4 py-3 text-white lg:h-dvh lg:w-[280px] lg:gap-5 lg:px-6 lg:py-8">
@@ -87,15 +88,15 @@ function WindowPanel() {
         <p className="mt-0.5 text-sm text-white/70">{AUTHOR}</p>
       </div>
 
-      <div className="rounded-panel border border-white/25 px-3 py-2.5">
-        <p className="px-1 text-[11px] font-medium uppercase tracking-[0.08em] text-white/60">Date</p>
-        <div className="mt-1 flex items-center gap-1">
+      <div>
+        <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-white/60">Date</p>
+        <div className="mt-1.5 grid grid-cols-[40px_minmax(0,1fr)_40px] gap-2">
           <button onClick={() => shiftDay(-1)} disabled={day <= 0} aria-label="Previous day" className={ctl}>
             <ChevronLeft aria-hidden size={16} />
           </button>
-          <p className="flex-1 overflow-hidden text-center text-md font-semibold" aria-live="polite">
+          <p className="grid h-10 place-items-center overflow-hidden rounded-card border border-white/25 text-md font-semibold" aria-live="polite">
             <span ref={dayRef} className="inline-block">
-              {fmtDay(day)} 2026
+              {fmtDay(day)}
             </span>
           </p>
           <button onClick={() => shiftDay(1)} aria-label="Next day" className={ctl}>
