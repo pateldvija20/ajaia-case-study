@@ -1,23 +1,20 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import {
   ArrowLeft,
   Check,
+  ChevronDown,
   CircleDashed,
-  ClipboardList,
   FileText,
-  Files,
   Hourglass,
   Info,
   Mail,
   Briefcase,
   UserRound,
   Phone,
-  Stamp,
-  Timer,
   X,
 } from 'lucide-react'
 import { useProto, buildFollowUpDraft } from '../store'
-import { buildRequestDraft, daysWaiting, decisionKey, displayStatus, fmtDay, getChecklist, isOverdue, nextPrompt, type DisplayStatus } from '../logic'
+import { buildRequestDraft, daysWaiting, decisionKey, displayStatus, fmtDay, getChecklist, isOverdue, nextPrompt } from '../logic'
 import { USER } from '../mockData'
 import { Flip, gsap, prefersReduced, useGSAP, useIndicator, withMotion } from '../motion'
 import { StatusBadge } from '../components/StatusBadge'
@@ -25,65 +22,208 @@ import { AiTag } from '../components/AiTag'
 import { Button, Counter, ProtoFooter } from '../components/ui'
 import { DrawnCheck, EmailDraft } from '../components/EmailDraft'
 import { BindDialog } from '../components/BindDialog'
-import { NextStep } from './Home'
-import type { AppSection, Decision, DocRef, SourceDoc, Submission } from '../types'
+import { InlineLink } from './Home'
+import type { Decision, DocRef, SourceDoc, Submission } from '../types'
 
-const SECTIONS: { id: AppSection; label: string; icon: typeof Info }[] = [
-  { id: 'status', label: 'Status', icon: Info },
-  { id: 'checklist', label: 'Checklist', icon: ClipboardList },
-  { id: 'docs', label: 'Docs', icon: Files },
-  { id: 'followup', label: 'Follow-up', icon: Timer },
-  { id: 'bind', label: 'Bind', icon: Stamp },
+type Step = 'checklist' | 'docs' | 'followup' | 'bind'
+const STEPS: { id: Step; title: string }[] = [
+  { id: 'checklist', title: 'Checklist' },
+  { id: 'docs', title: 'Document mismatch' },
+  { id: 'followup', title: 'Follow-up' },
+  { id: 'bind', title: 'Final review and bind' },
 ]
 
-type Tone = 'done' | 'todo' | 'alert' | 'idle'
-const TONE: Record<Tone, string> = {
-  done: 'border-success-line bg-success-bg text-success',
-  todo: 'border-warning-line bg-warning-bg text-warning',
-  alert: 'border-danger-line bg-danger-bg text-danger',
-  idle: 'border-line bg-muted text-ink-3',
+interface StepState {
+  done: boolean
+  action: boolean
+  count?: string
+  progress?: number
+  line: ReactNode
 }
 
-/** One short state per section, shared by the side tabs and the status bar. */
-function useSectionStates(sub: Submission) {
+/** Done / needs-action state and the always-visible next-step line for each step. */
+function useSteps(sub: Submission): Record<Step, StepState> {
   const { day, decisions, suggestions } = useProto()
-  return useMemo(() => {
-    const st = displayStatus(sub, day)
-    const list = getChecklist(sub)
-    const done = list.filter((c) => c.state === 'done' || suggestions[decisionKey(sub.id, c.id)] === 'accepted').length
-    const diffs = sub.diffs ?? []
-    const open = diffs.filter((d) => !decisions[decisionKey(sub.id, d.id)]).length
-    const docs: [string, Tone] =
-      st === 'mismatch' ? [open ? `${open} to review` : 'Reviewed', open ? 'alert' : 'done'] : st === 'missing' ? ['1 missing', 'todo'] : [`${sub.documents.length} on file`, 'done']
-    const follow: [string, Tone] =
-      st === 'overdue' ? [`Overdue · day ${daysWaiting(sub, day)}`, 'alert'] : st === 'waiting' ? [`Waiting · day ${daysWaiting(sub, day)}`, 'todo'] : ['Not needed', 'idle']
-    const bind: [string, Tone] = st === 'bound' ? ['Bound', 'done'] : st === 'ready' ? ['Ready', 'done'] : ['Locked', 'idle']
-    return {
-      st,
-      status: [st[0].toUpperCase() + st.slice(1), st === 'ready' || st === 'bound' ? 'done' : st === 'waiting' ? 'todo' : 'alert'] as [string, Tone],
-      checklist: [`${done} of ${list.length}`, done === list.length ? 'done' : 'todo'] as [string, Tone],
-      docs,
-      followup: follow,
-      bind,
-    } as Record<AppSection, [string, Tone]> & { st: DisplayStatus }
-  }, [sub, day, decisions, suggestions])
+  const openApp = useProto((s) => s.openApp)
+  const markReady = useProto((s) => s.markReady)
+  const chooseFollow = useProto((s) => s.chooseFollow)
+  const go = (step: Step) => () => openApp(sub.id, step)
+  const first = sub.broker.name.split(' ')[0]
+  const st = displayStatus(sub, day)
+
+  const list = getChecklist(sub)
+  const doneItems = list.filter((c) => c.state === 'done' || suggestions[decisionKey(sub.id, c.id)] === 'accepted').length
+  const missing = list.find((c) => c.state === 'missing')
+  const pendingSuggestions = list.filter((c) => c.suggestion && !suggestions[decisionKey(sub.id, c.id)]).length
+  const diffs = sub.diffs ?? []
+  const decided = diffs.filter((d) => decisions[decisionKey(sub.id, d.id)]).length
+  const real = diffs.filter((d) => decisions[decisionKey(sub.id, d.id)] === 'real').length
+  const firstOpen = diffs.find((d) => !decisions[decisionKey(sub.id, d.id)])
+  const asked = sub.askedFor?.split(' (')[0]
+
+  const checklist: StepState = {
+    done: doneItems === list.length,
+    action: pendingSuggestions > 0 || (sub.status === 'missing' && !!missing),
+    count: `${doneItems} of ${list.length}`,
+    progress: doneItems / list.length,
+    line:
+      sub.status === 'missing' && missing ? (
+        <>
+          {missing.label} has not arrived. <InlineLink onClick={go('followup')}>Ask {first} for it</InlineLink>
+        </>
+      ) : pendingSuggestions ? (
+        <>
+          {pendingSuggestions} suggested values to review. <InlineLink onClick={go('checklist')}>Review suggestions</InlineLink>
+        </>
+      ) : missing ? (
+        `Open: ${missing.label.toLowerCase()}. ${missing.detail}.`
+      ) : (
+        `All ${list.length} items complete.`
+      ),
+  }
+
+  const docs: StepState = !diffs.length
+    ? { done: true, action: false, count: 'none', line: 'No differences between the documents.' }
+    : {
+        done: decided === diffs.length,
+        action: sub.status === 'mismatch' && decided < diffs.length,
+        count: `${decided} of ${diffs.length}`,
+        line:
+          sub.status !== 'mismatch' ? (
+            real ? `${real} real mismatch raised with ${first}.` : 'All differences accepted.'
+          ) : firstOpen ? (
+            <>
+              {firstOpen.field} differs: certificate {firstOpen.right}, application {firstOpen.left}. <InlineLink onClick={go('docs')}>Review differences</InlineLink>
+            </>
+          ) : real ? (
+            <>
+              {real} real mismatch to raise with {first}. <InlineLink onClick={go('followup')}>Review the email</InlineLink>
+            </>
+          ) : (
+            <>
+              All differences accepted. <InlineLink onClick={() => markReady(sub.id)}>Mark ready</InlineLink>
+            </>
+          ),
+      }
+
+  const draftReady = (sub.status === 'mismatch' && diffs.length > 0 && decided === diffs.length && real > 0) || sub.status === 'missing'
+  const followup: StepState =
+    st === 'overdue'
+      ? {
+          done: false,
+          action: true,
+          count: `day ${daysWaiting(sub, day)}`,
+          line: (
+            <>
+              No reply from {first} for {day - (sub.lastContact ?? day)} days on {asked}.{' '}
+              <InlineLink
+                onClick={() => {
+                  chooseFollow(sub.id, 'email')
+                  openApp(sub.id, 'followup')
+                }}
+              >
+                Follow up
+              </InlineLink>{' '}
+              <InlineLink
+                onClick={() => {
+                  chooseFollow(sub.id, 'call')
+                  openApp(sub.id, 'followup')
+                }}
+              >
+                Call {first}
+              </InlineLink>
+            </>
+          ),
+        }
+      : st === 'waiting'
+        ? {
+            done: false,
+            action: false,
+            count: `day ${daysWaiting(sub, day)}`,
+            line: `Asked ${first} for ${asked} on ${fmtDay(sub.lastContact ?? day)}. Next nudge ${fmtDay(nextPrompt(sub))}.`,
+          }
+        : draftReady
+          ? {
+              done: false,
+              action: true,
+              line: (
+                <>
+                  {sub.status === 'missing' ? `Request for ${missing?.label.toLowerCase() ?? 'the missing document'} is drafted.` : `Email to ${first} is drafted from your decisions.`}{' '}
+                  <InlineLink onClick={go('followup')}>Review draft</InlineLink>
+                </>
+              ),
+            }
+          : sub.status === 'mismatch'
+            ? { done: false, action: false, line: 'The broker email is drafted once every difference is marked.' }
+            : {
+                done: true,
+                action: false,
+                count: 'not needed',
+                line: (
+                  <>
+                    Nothing waiting on the broker. <InlineLink onClick={go('followup')}>Write a follow-up</InlineLink>
+                  </>
+                ),
+              }
+
+  const bind: StepState =
+    sub.status === 'bound'
+      ? { done: true, action: false, line: `Bound ${sub.boundOn}. Policy ${sub.policyNo} is active from ${sub.effective}.` }
+      : sub.status === 'ready'
+        ? {
+            done: false,
+            action: true,
+            line: (
+              <>
+                Every check passed. <InlineLink onClick={go('bind')}>Review and bind</InlineLink>
+              </>
+            ),
+          }
+        : { done: false, action: false, count: 'locked', line: 'Unlocks once steps 1 to 3 are done.' }
+
+  return { checklist, docs, followup, bind }
 }
 
+function defaultStep(sub: Submission, steps: Record<Step, StepState>): Step {
+  if (sub.status === 'mismatch') return steps.docs.done ? 'followup' : 'docs'
+  if (sub.status === 'missing') return 'checklist'
+  if (sub.status === 'waiting') return 'followup'
+  return 'bind'
+}
 
 export function AppDetail({ id }: { id: string }) {
   const sub = useProto((s) => s.subs.find((x) => x.id === id))!
-  const { screen, epoch, docsTab, bindDialog } = useProto()
+  const { screen, epoch, bindDialog, day } = useProto()
   const go = useProto((s) => s.go)
-  const openApp = useProto((s) => s.openApp)
-  const states = useSectionStates(sub)
+  const steps = useSteps(sub)
   const root = useRef<HTMLDivElement>(null)
-  const panel = useRef<HTMLDivElement>(null)
-  const tab = docsTab[id] ?? (sub.diffs && sub.status === 'mismatch' ? 'compare' : 'all')
+  const tabsRef = useRef<HTMLDivElement>(null)
+  const [view, setView] = useState<'status' | 'documents'>('status')
+  useIndicator(tabsRef, view)
 
-  // One section at a time. Default to the section the status points at.
-  const fallback: AppSection = sub.status === 'mismatch' ? 'docs' : sub.status === 'missing' ? 'checklist' : sub.status === 'waiting' ? 'followup' : 'bind'
-  const requested = screen.name === 'app' ? screen.section : undefined
-  const active: AppSection = requested && requested !== 'status' ? requested : fallback
+  const requested = screen.name === 'app' && screen.section && screen.section !== 'status' ? (screen.section as Step) : undefined
+  const [open, setOpen] = useState<Set<Step>>(() => new Set([requested ?? defaultStep(sub, steps)]))
+  const mounted = useRef(false)
+  // A link that points at a step opens it and brings it into view.
+  useEffect(() => {
+    if (!requested) return
+    setView('status')
+    setOpen((o) => new Set(o).add(requested))
+    if (!mounted.current) return
+    requestAnimationFrame(() =>
+      document.getElementById(`step-${requested}`)?.scrollIntoView({ behavior: prefersReduced() ? 'auto' : 'smooth', block: 'start' }),
+    )
+  }, [screen, requested])
+  useEffect(() => {
+    mounted.current = true
+  }, [])
+  const toggle = (s: Step) =>
+    setOpen((o) => {
+      const n = new Set(o)
+      if (n.has(s)) n.delete(s)
+      else n.add(s)
+      return n
+    })
 
   useGSAP(
     () =>
@@ -92,32 +232,44 @@ export function AppDetail({ id }: { id: string }) {
       }),
     { scope: root, revertOnUpdate: true, dependencies: [id, epoch] },
   )
-  // Switching tabs: the new section enters; the header stays put.
-  const firstTab = useRef(true)
-  useGSAP(
-    () => {
-      if (firstTab.current) {
-        firstTab.current = false
-        return
-      }
-      withMotion(() => void gsap.from(panel.current, { opacity: 0, y: 6, duration: 0.28, ease: 'power3.out' }))
-    },
-    { revertOnUpdate: true, dependencies: [active] },
-  )
 
   return (
     <div ref={root} className="h-full">
       <div id="app-scroll" className="relative h-full overflow-auto">
         <div className="mx-auto w-full max-w-[1240px] px-4 pb-14 pt-5 md:px-8">
           <button onClick={() => go({ name: 'home' })} className="inline-flex items-center gap-1 rounded-md text-sm text-ink-2 hover:text-ink">
-            <ArrowLeft aria-hidden size={15} /> Open applications
+            <ArrowLeft aria-hidden size={15} /> Go back
           </button>
-          <StatusSection sub={sub} states={states} active={active} onTab={(s) => openApp(sub.id, s)} />
-          <div ref={panel} role="tabpanel" id={`panel-${active}`} aria-labelledby={`tab-${active}`} className="mt-8">
-            {active === 'checklist' && <ChecklistSection sub={sub} />}
-            {active === 'docs' && <DocsSection sub={sub} tab={tab} />}
-            {active === 'followup' && <FollowUpSection sub={sub} />}
-            {active === 'bind' && <BindSection sub={sub} />}
+          <header data-enter className="mt-3 flex flex-wrap items-start justify-between gap-3">
+            <h1 className="font-display text-[32px] leading-10 tracking-[-0.01em]">{sub.client}</h1>
+            <StatusBadge status={displayStatus(sub, day)} days={daysWaiting(sub, day)} />
+          </header>
+          <ClientInfo sub={sub} />
+
+          <div data-enter ref={tabsRef} role="tablist" aria-label="Application views" className="relative mt-8 flex gap-6 border-b border-line">
+            <span data-indicator aria-hidden className="absolute bottom-[-1px] left-0 h-0.5 w-px origin-left bg-ink opacity-0" />
+            {(
+              [
+                ['status', 'Status'],
+                ['documents', 'All documents'],
+              ] as const
+            ).map(([k, label]) => (
+              <button
+                key={k}
+                role="tab"
+                aria-selected={view === k}
+                data-active={view === k}
+                onClick={() => setView(k)}
+                className={`flex items-center gap-1.5 pb-2.5 pt-1 text-base font-medium transition-colors ${view === k ? 'text-ink' : 'text-ink-3 hover:text-ink'}`}
+              >
+                {label}
+                {k === 'documents' && <span className="rounded-full bg-muted px-1.5 text-xs tabular-nums text-ink-2">{sub.documents.length}</span>}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-6">
+            {view === 'status' ? <Stepper sub={sub} steps={steps} open={open} onToggle={toggle} /> : <DocsTable sub={sub} />}
           </div>
         </div>
         <ProtoFooter />
@@ -127,27 +279,83 @@ export function AppDetail({ id }: { id: string }) {
   )
 }
 
-function SectionHead({ id, title, note }: { id: AppSection; title: string; note?: string }) {
+/* ------------------------------ Status stepper ------------------------------ */
+
+function Stepper({ sub, steps, open, onToggle }: { sub: Submission; steps: Record<Step, StepState>; open: Set<Step>; onToggle: (s: Step) => void }) {
   return (
-    <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-      <h2 id={`h-${id}`} className="font-display text-[24px] leading-8">
-        {title}
-      </h2>
-      {note && <p className="text-sm text-ink-3">{note}</p>}
+    <ol aria-label="Application status" className="relative">
+      {STEPS.map((s, i) => {
+        const st = steps[s.id]
+        const isOpen = open.has(s.id)
+        const last = i === STEPS.length - 1
+        return (
+          <li key={s.id} id={`step-${s.id}`} className="relative scroll-mt-4 pb-6 pl-12 last:pb-0">
+            {!last && <span aria-hidden className={`absolute bottom-0 left-[15px] top-9 w-0.5 rounded-full ${st.done ? 'bg-success' : 'bg-line-strong'}`} />}
+            <span
+              aria-hidden
+              className={`absolute left-0 top-1 grid h-8 w-8 place-items-center rounded-full text-sm font-semibold ${
+                st.done ? 'bg-success text-white' : st.action ? 'bg-ink text-white' : 'border-2 border-line-strong bg-canvas text-ink-3'
+              }`}
+            >
+              {st.done ? <Check size={16} strokeWidth={3} /> : i + 1}
+            </span>
+            <div className={`rounded-panel border bg-surface shadow-card ${st.action && !st.done ? 'border-line-strong' : 'border-line'}`}>
+              <button
+                onClick={() => onToggle(s.id)}
+                aria-expanded={isOpen}
+                aria-controls={`step-body-${s.id}`}
+                className="flex w-full items-start gap-3 px-5 py-3.5 text-left"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="text-[15px] font-semibold">{s.title}</span>
+                    {st.count && <span className="text-sm tabular-nums text-ink-3">({st.count})</span>}
+                    <span className="sr-only">{st.done ? 'done' : st.action ? 'needs action' : ''}</span>
+                  </span>
+                </span>
+                {st.progress !== undefined && (
+                  <span aria-hidden className="mt-2 hidden h-1.5 w-40 overflow-hidden rounded-full bg-muted sm:block">
+                    <span className="block h-full origin-left rounded-full bg-success transition-transform duration-300" style={{ transform: `scaleX(${st.progress})` }} />
+                  </span>
+                )}
+                <ChevronDown aria-hidden size={18} className={`mt-0.5 shrink-0 text-ink-3 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+              </button>
+              <div data-decision="next-step" className="-mt-1.5 px-5 pb-3.5 text-sm leading-6 text-ink-2">
+                {st.line}
+              </div>
+              {isOpen && (
+                <StepBody id={s.id}>
+                  {s.id === 'checklist' && <ChecklistSection sub={sub} />}
+                  {s.id === 'docs' && (sub.diffs && sub.counterDoc ? <Compare sub={sub} /> : <p className="text-sm text-ink-3">The documents on file agree with the application. See All documents for the full list.</p>)}
+                  {s.id === 'followup' && <FollowUpSection sub={sub} />}
+                  {s.id === 'bind' && <BindSection sub={sub} />}
+                </StepBody>
+              )}
+            </div>
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
+function StepBody({ id, children }: { id: Step; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useGSAP(() => withMotion(() => void gsap.from(ref.current, { opacity: 0, y: -4, duration: 0.28, ease: 'power3.out' })), { scope: ref })
+  return (
+    <div ref={ref} id={`step-body-${id}`} className="border-t border-line px-5 py-5">
+      {children}
     </div>
   )
 }
 
-/* ------------------------------ Status ------------------------------ */
+/* ------------------------------ Client info ------------------------------ */
 
-/** Client information grouped into three tinted tiles so each kind of fact has a fixed place. */
 function ClientInfo({ sub }: { sub: Submission }) {
-  const groups: { title: string; icon: typeof Info; tint: string; iconTint: string; rows: [string, ReactNode][] }[] = [
+  const groups: { title: string; icon: typeof Info; rows: [string, ReactNode][] }[] = [
     {
       title: 'Policy',
       icon: FileText,
-      tint: 'bg-info-bg/60 border-info-line',
-      iconTint: 'bg-info text-white',
       rows: [
         ['Line', sub.line],
         ['Policy number', <span key="p" className="font-mono">{sub.policyNo}</span>],
@@ -157,8 +365,6 @@ function ClientInfo({ sub }: { sub: Submission }) {
     {
       title: 'Broker',
       icon: Briefcase,
-      tint: 'bg-warning-bg/60 border-warning-line',
-      iconTint: 'bg-warning text-white',
       rows: [
         ['Name', `${sub.broker.name}, ${sub.broker.firm}`],
         ['Email', sub.broker.email],
@@ -168,8 +374,6 @@ function ClientInfo({ sub }: { sub: Submission }) {
     {
       title: 'Handling',
       icon: UserRound,
-      tint: 'bg-success-bg/60 border-success-line',
-      iconTint: 'bg-success text-white',
       rows: [
         ['Received', sub.received],
         ['Assigned to', USER.name],
@@ -180,16 +384,16 @@ function ClientInfo({ sub }: { sub: Submission }) {
   return (
     <div data-enter className="mt-4 grid gap-3 md:grid-cols-3">
       {groups.map((g) => (
-        <section key={g.title} aria-label={g.title} className={`rounded-card border px-4 py-3 ${g.tint}`}>
+        <section key={g.title} aria-label={g.title} className="rounded-card border border-line bg-surface px-4 py-3 shadow-card">
           <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-ink-2">
-            <span aria-hidden className={`grid h-5 w-5 place-items-center rounded-md ${g.iconTint}`}>
+            <span aria-hidden className="grid h-5 w-5 place-items-center rounded-md bg-muted text-ink-2">
               <g.icon size={12} strokeWidth={2.25} />
             </span>
             {g.title}
           </p>
           <dl className="mt-2 space-y-1.5 text-sm">
             {g.rows.map(([k, v]) => (
-              <div key={k} className="grid grid-cols-[96px_minmax(0,1fr)] gap-2">
+              <div key={k} className="grid grid-cols-[104px_minmax(0,1fr)] gap-2">
                 <dt className="text-ink-3">{k}</dt>
                 <dd className="min-w-0 break-words text-ink">{v}</dd>
               </div>
@@ -201,73 +405,96 @@ function ClientInfo({ sub }: { sub: Submission }) {
   )
 }
 
-function StatusSection({ sub, states, active, onTab }: { sub: Submission; states: ReturnType<typeof useSectionStates>; active: AppSection; onTab: (s: AppSection) => void }) {
-  const day = useProto((s) => s.day)
-  const steps: AppSection[] = ['checklist', 'docs', 'followup', 'bind']
+/* ------------------------------ All documents ------------------------------ */
+
+function DocsTable({ sub }: { sub: Submission }) {
+  const decisions = useProto((s) => s.decisions)
+  const [openId, setOpenId] = useState<string | null>(null)
+  const missing = getChecklist(sub).filter((c) => c.state === 'missing')
+  const grid = 'md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.8fr)_32px]'
   return (
-    <section id="sec-status" aria-labelledby="h-status" className="mt-3">
-      <header data-enter className="flex flex-wrap items-start justify-between gap-3">
-        <h1 id="h-status" className="font-display text-[32px] leading-10 tracking-[-0.01em]">
-          {sub.client}
-        </h1>
-        <StatusBadge status={states.st} days={daysWaiting(sub, day)} />
-      </header>
-
-      <ClientInfo sub={sub} />
-
-      <div data-enter data-decision="next-step" className="mt-4 rounded-card bg-surface px-4 py-3 text-[15px] leading-6 text-ink-2 shadow-card ring-1 ring-line">
-        <span className="mb-0.5 block text-xs font-semibold uppercase tracking-[0.08em] text-ink-3">Next step</span>
-        <NextStep sub={sub} />
+    <div role="table" aria-label="All documents" className="overflow-hidden rounded-panel border border-line bg-surface shadow-card">
+      <div role="row" className={`hidden bg-muted/70 px-4 py-2 text-xs font-medium text-ink-3 md:grid md:gap-4 ${grid}`}>
+        <span role="columnheader">Document</span>
+        <span role="columnheader">Source</span>
+        <span role="columnheader">Received</span>
+        <span role="columnheader" className="sr-only">
+          Preview
+        </span>
       </div>
-
-      {/* Status cards double as the section tabs */}
-      <div data-enter role="tablist" aria-label="Application sections" className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {steps.map((s) => {
-          const [word, tone] = states[s]
-          const label = SECTIONS.find((x) => x.id === s)!.label
-          const on = active === s
-          return (
+      {sub.documents.map((d) => {
+        const isOpen = openId === d.id
+        return (
+          <div key={d.id} role="rowgroup" className="border-t border-line">
             <button
-              key={s}
-              role="tab"
-              id={`tab-${s}`}
-              aria-selected={on}
-              aria-controls={`panel-${s}`}
-              onClick={() => onTab(s)}
-              className={`relative flex w-full items-center gap-2 rounded-card border px-3 py-2.5 text-left transition-[transform,box-shadow] duration-150 active:translate-y-px ${TONE[tone]} ${
-                on ? 'shadow-card ring-2 ring-ink ring-offset-2 ring-offset-canvas' : 'opacity-80 hover:opacity-100 hover:shadow-card'
-              }`}
+              role="row"
+              onClick={() => setOpenId(isOpen ? null : d.id)}
+              aria-expanded={isOpen}
+              className={`grid w-full items-start gap-1 px-4 py-3 text-left transition-colors hover:bg-[#fbfbf9] md:gap-4 ${grid} ${isOpen ? 'bg-canvas' : ''}`}
             >
-              {tone === 'done' ? <Check aria-hidden size={15} strokeWidth={2.5} /> : tone === 'alert' ? <X aria-hidden size={15} strokeWidth={2.5} /> : tone === 'todo' ? <CircleDashed aria-hidden size={15} strokeWidth={2.25} /> : <Hourglass aria-hidden size={15} />}
-              <span className="min-w-0">
-                <span className="block text-xs opacity-80">{label}</span>
-                <span className="block truncate text-sm font-semibold">{word}</span>
+              <span role="cell" className="flex min-w-0 items-start gap-2.5">
+                <FileText aria-hidden size={16} className="mt-0.5 shrink-0 text-ink-3" />
+                <span className="min-w-0">
+                  <span className="block truncate font-mono text-[13px]">{d.name}</span>
+                  <span className="block text-xs text-ink-3">{d.type}</span>
+                </span>
+              </span>
+              <span role="cell" className="text-sm text-ink-2">
+                {d.source}
+              </span>
+              <span role="cell" className="text-sm text-ink-2">
+                {d.received}
+              </span>
+              <span role="cell" className="hidden justify-end md:flex">
+                <ChevronDown aria-hidden size={16} className={`text-ink-3 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
               </span>
             </button>
-          )
-        })}
-      </div>
-    </section>
+            {isOpen && (
+              <div className="border-t border-line bg-canvas px-4 py-4">
+                <div className="mx-auto max-w-[640px]">
+                  <DocPreview doc={d} sub={sub} decisions={decisions} />
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })}
+      {missing.map((m) => (
+        <div key={m.id} role="row" className={`grid items-start gap-1 border-t border-line px-4 py-3 md:gap-4 ${grid}`}>
+          <span role="cell" className="flex min-w-0 items-start gap-2.5">
+            <CircleDashed aria-hidden size={16} className="mt-0.5 shrink-0 text-info" />
+            <span>
+              <span className="block text-sm font-medium">{m.label}</span>
+              <span className="mt-0.5 inline-flex h-5 items-center rounded-full border border-info-line bg-info-bg px-2 text-[11px] font-medium text-info">Missing</span>
+            </span>
+          </span>
+          <span role="cell" className="text-sm text-ink-3">
+            {m.detail}
+          </span>
+          <span role="cell" className="text-sm text-ink-3">
+            –
+          </span>
+          <span role="cell" />
+        </div>
+      ))}
+    </div>
   )
 }
 
 /* ------------------------------ Checklist ------------------------------ */
 
 function ChecklistSection({ sub }: { sub: Submission }) {
-  const { suggestions, drafts, editing } = useProto()
+  const { suggestions } = useProto()
   const suggest = useProto((s) => s.suggest)
-  const setDraft = useProto((s) => s.setDraft)
-  const setEditing = useProto((s) => s.setEditing)
-  const sendRequest = useProto((s) => s.sendRequest)
   const items = getChecklist(sub)
   const suggested = items.filter((c) => c.suggestion)
   const handled = suggested.filter((c) => suggestions[decisionKey(sub.id, c.id)]).length
   const done = items.filter((c) => c.state === 'done' || suggestions[decisionKey(sub.id, c.id)] === 'accepted').length
 
   return (
-    <section id="sec-checklist" aria-labelledby="h-checklist">
-      <SectionHead id="checklist" title="Checklist" note="Bindwise checklist, unchanged" />
-      <div data-decision="checklist" className="rounded-panel border border-line bg-surface shadow-card">
+    <section aria-label="Checklist">
+      <p className="mb-2 text-xs text-ink-3">Bindwise checklist, unchanged</p>
+      <div data-decision="checklist" className="rounded-card border border-line bg-surface">
         <div className="flex items-center justify-between border-b border-line px-5 py-3">
           <p className="text-sm font-semibold">
             <Counter value={done} /> of {items.length} complete
@@ -341,53 +568,11 @@ function ChecklistSection({ sub }: { sub: Submission }) {
         )}
       </div>
 
-      {sub.status === 'missing' && (
-        <div className="mt-5" data-decision="email">
-          <EmailDraft
-            text={drafts[sub.id] ?? buildRequestDraft(sub, {}, suggestions)}
-            editing={editing === sub.id}
-            onEdit={(on) => setEditing(on ? sub.id : null)}
-            onChange={(t) => setDraft(sub.id, t)}
-            onSend={() => {
-              sendRequest(sub.id)
-              useProto.getState().openApp(sub.id, 'followup')
-            }}
-            sendLabel={`Send to ${sub.broker.name.split(' ')[0]}`}
-            title="Request for the missing document"
-            did="Drafted a request for the missing document"
-            evidence={['Checklist item "Loss runs (5 years)" is empty', 'No matching document in portal, inbox or uploads']}
-          />
-        </div>
-      )}
     </section>
   )
 }
 
 /* ------------------------------ Docs ------------------------------ */
-
-function DocsSection({ sub, tab }: { sub: Submission; tab: 'compare' | 'all' }) {
-  const setDocsTab = useProto((s) => s.setDocsTab)
-  const tabsRef = useRef<HTMLDivElement>(null)
-  useIndicator(tabsRef, tab)
-  const canCompare = Boolean(sub.diffs && sub.counterDoc)
-  return (
-    <section id="sec-docs" aria-labelledby="h-docs">
-      <SectionHead id="docs" title="Documents" note={`${sub.documents.length} on file`} />
-      <div ref={tabsRef} role="tablist" aria-label="Documents view" className="relative mb-4 flex gap-5 border-b border-line">
-        <span data-indicator aria-hidden className="absolute bottom-[-1px] left-0 h-0.5 w-px origin-left bg-ink opacity-0" />
-        {canCompare && (
-          <button role="tab" aria-selected={tab === 'compare'} data-active={tab === 'compare'} onClick={() => setDocsTab(sub.id, 'compare')} className={`pb-2 text-sm font-medium ${tab === 'compare' ? 'text-ink' : 'text-ink-3 hover:text-ink'}`}>
-            Compare
-          </button>
-        )}
-        <button role="tab" aria-selected={tab === 'all'} data-active={tab === 'all'} onClick={() => setDocsTab(sub.id, 'all')} className={`pb-2 text-sm font-medium ${tab === 'all' ? 'text-ink' : 'text-ink-3 hover:text-ink'}`}>
-          All documents
-        </button>
-      </div>
-      {tab === 'compare' && canCompare ? <Compare sub={sub} /> : <AllDocs sub={sub} />}
-    </section>
-  )
-}
 
 function DocPaper({ doc, side, sub, decisions, active, onHighlight }: { doc: SourceDoc; side: 'left' | 'right' | 'solo'; sub: Submission; decisions: Record<string, Decision>; active?: string | null; onHighlight?: (diffId: string) => void }) {
   return (
@@ -434,11 +619,8 @@ function DocPaper({ doc, side, sub, decisions, active, onHighlight }: { doc: Sou
 }
 
 function Compare({ sub }: { sub: Submission }) {
-  const { decisions, drafts, editing, scrollTarget, epoch, focusDiff } = useProto()
+  const { decisions, epoch, focusDiff } = useProto()
   const decide = useProto((s) => s.decide)
-  const setDraft = useProto((s) => s.setDraft)
-  const setEditing = useProto((s) => s.setEditing)
-  const sendRequest = useProto((s) => s.sendRequest)
   const markReady = useProto((s) => s.markReady)
   const setFocusDiff = useProto((s) => s.setFocusDiff)
   const [active, setActive] = useState<string | null>(null)
@@ -513,14 +695,13 @@ function Compare({ sub }: { sub: Submission }) {
     { scope: area, revertOnUpdate: true, dependencies: [paths.length > 0, epoch] },
   )
 
+  // Once every difference is marked and one is real, step 3 opens with the drafted email.
+  const openApp = useProto((s) => s.openApp)
   const wasDecided = useRef(allDecided)
   useEffect(() => {
-    if (allDecided && !wasDecided.current) requestAnimationFrame(() => document.getElementById('draft-anchor')?.scrollIntoView({ behavior: prefersReduced() ? 'auto' : 'smooth', block: 'start' }))
+    if (allDecided && !wasDecided.current && anyReal) openApp(sub.id, 'followup')
     wasDecided.current = allDecided
-  }, [allDecided])
-  useEffect(() => {
-    if (scrollTarget === 'draft') document.getElementById('draft-anchor')?.scrollIntoView({ block: 'start' })
-  }, [scrollTarget, epoch])
+  }, [allDecided, anyReal, openApp, sub.id])
 
   return (
     <div className="space-y-5">
@@ -611,22 +792,11 @@ function Compare({ sub }: { sub: Submission }) {
         </aside>
       </div>
 
-      <div id="draft-anchor" className="scroll-mt-4" />
       {allDecided && anyReal && (
-        <div data-decision="email">
-          <EmailDraft
-            text={drafts[sub.id] ?? buildRequestDraft(sub, decisions, {})}
-            editing={editing === sub.id}
-            onEdit={(on) => setEditing(on ? sub.id : null)}
-            onChange={(t) => setDraft(sub.id, t)}
-            onSend={() => {
-              sendRequest(sub.id)
-              useProto.getState().openApp(sub.id, 'followup')
-            }}
-            sendLabel={`Send to ${sub.broker.name.split(' ')[0]}`}
-            evidence={raw.filter((d) => decisions[decisionKey(sub.id, d.id)] === 'real').map((d) => `${d.field}: ${d.right} (certificate) vs ${d.left} (application)`)}
-          />
-        </div>
+        <p className="text-sm text-ink-2">
+          You marked {raw.filter((d) => decisions[decisionKey(sub.id, d.id)] === 'real').length} real mismatch. The email to the broker is drafted in step 3.{' '}
+          <InlineLink onClick={() => openApp(sub.id, 'followup')}>Open step 3</InlineLink>
+        </p>
       )}
       {allDecided && !anyReal && (
         <section className="flex flex-wrap items-center justify-between gap-3 rounded-panel border border-success-line bg-success-bg px-5 py-4">
@@ -635,7 +805,7 @@ function Compare({ sub }: { sub: Submission }) {
             variant="primary"
             onClick={() => {
               markReady(sub.id)
-              useProto.getState().openApp(sub.id, 'bind')
+              openApp(sub.id, 'bind')
             }}
           >
             Mark ready
@@ -643,44 +813,6 @@ function Compare({ sub }: { sub: Submission }) {
         </section>
       )}
       {!allDecided && <p className="text-sm text-ink-3">Mark each difference to continue. The broker email is drafted once you have decided.</p>}
-    </div>
-  )
-}
-
-function AllDocs({ sub }: { sub: Submission }) {
-  const [sel, setSel] = useState<string | null>(sub.documents[0]?.id ?? null)
-  const decisions = useProto((s) => s.decisions)
-  const doc = sub.documents.find((d) => d.id === sel)
-  const missing = getChecklist(sub).filter((c) => c.state === 'missing')
-  return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-      <div>
-        <ul className="divide-y divide-line overflow-hidden rounded-card border border-line bg-surface">
-          {sub.documents.map((d) => (
-            <li key={d.id}>
-              <button onClick={() => setSel(d.id)} aria-pressed={sel === d.id} className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors ${sel === d.id ? 'bg-canvas' : 'hover:bg-[#fbfbf9]'}`}>
-                <FileText aria-hidden size={18} className="mt-0.5 shrink-0 text-ink-3" />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-mono text-[13px]">{d.name}</span>
-                  <span className="block text-xs text-ink-3">
-                    <span className="font-medium text-ink-2">{d.type}</span> · {d.source} · {d.received}
-                  </span>
-                </span>
-              </button>
-            </li>
-          ))}
-          {missing.map((m) => (
-            <li key={m.id} className="flex items-start gap-3 bg-info-bg/60 px-4 py-3">
-              <CircleDashed aria-hidden size={18} className="mt-0.5 shrink-0 text-info" />
-              <span className="text-sm">
-                <span className="font-medium">{m.label}</span>
-                <span className="block text-xs text-info">Missing · {m.detail}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div className="min-h-[320px]">{doc ? <DocPreview doc={doc} sub={sub} decisions={decisions} /> : <p className="text-sm text-ink-3">Select a document to preview it.</p>}</div>
     </div>
   )
 }
@@ -712,11 +844,103 @@ export function GenericPage({ title, name, meta }: { title: string; name: string
 
 /* ------------------------------ Follow-up ------------------------------ */
 
+function genericDraft(sub: Submission) {
+  const first = sub.broker.name.split(' ')[0]
+  return [
+    `To: ${sub.broker.name} <${sub.broker.email}>`,
+    `Subject: ${sub.client} ${sub.policyNo} · checking in`,
+    ``,
+    `Hi ${first},`,
+    `Checking in on ${sub.client} ahead of the ${sub.effective} effective date.`,
+    `Is there anything you need from us, or anything still on its way?`,
+    ``,
+    `Thanks,`,
+    `${USER.name}`,
+  ].join('\n')
+}
+
+/** Email or call, for any application. Used when nothing is drafted automatically. */
+function ContactChooser({ sub }: { sub: Submission }) {
+  const { drafts, editing } = useProto()
+  const setDraft = useProto((s) => s.setDraft)
+  const setEditing = useProto((s) => s.setEditing)
+  const sendFollowUp = useProto((s) => s.sendFollowUp)
+  const logCall = useProto((s) => s.logCall)
+  const toast = useProto((s) => s.toast)
+  const [choice, setChoice] = useState<'email' | 'call' | null>(null)
+  const first = sub.broker.name.split(' ')[0]
+  const key = `${sub.id}:followup`
+  const waiting = sub.status === 'waiting'
+  return (
+    <div className="space-y-3">
+      <div role="radiogroup" aria-label={`Contact ${first}`} className="grid gap-2 sm:grid-cols-2">
+        {[
+          { k: 'email' as const, icon: Mail, t: 'Write a follow-up', d: 'Drafted for you to edit' },
+          { k: 'call' as const, icon: Phone, t: `Call ${first}`, d: sub.broker.phone },
+        ].map((o) => (
+          <button
+            key={o.k}
+            role="radio"
+            aria-checked={choice === o.k}
+            onClick={() => setChoice(choice === o.k ? null : o.k)}
+            className={`flex items-start gap-3 rounded-card border p-3 text-left transition-colors duration-150 ${choice === o.k ? 'border-ink bg-canvas ring-1 ring-ink' : 'border-line-strong hover:border-ink-3 hover:bg-canvas'}`}
+          >
+            <o.icon aria-hidden size={16} className="mt-0.5 shrink-0" />
+            <span>
+              <span className="block text-sm font-semibold">{o.t}</span>
+              <span className="block text-xs text-ink-3">{o.d}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+      {choice === 'email' && (
+        <div data-decision="email">
+          <EmailDraft
+            key="generic"
+            text={drafts[key] ?? (waiting ? buildFollowUpDraft(sub) : genericDraft(sub))}
+            editing={editing === key}
+            onEdit={(on) => setEditing(on ? key : null)}
+            onChange={(t) => setDraft(key, t)}
+            onSend={() => {
+              if (waiting) sendFollowUp(sub.id)
+              else toast(`Sent to ${first}. Prototype only: nothing left this page.`)
+              setChoice(null)
+            }}
+            sendLabel={`Send to ${first}`}
+            title="Follow-up draft"
+            did="Drafted a follow-up you can edit"
+            evidence={[`Application: ${sub.client}`, `Effective ${sub.effective}`]}
+          />
+        </div>
+      )}
+      {choice === 'call' && <CallPanel sub={sub} onLog={() => (waiting ? logCall(sub.id) : (toast(`Call with ${first} logged.`), setChoice(null)))} />}
+    </div>
+  )
+}
+
+function CallPanel({ sub, onLog }: { sub: Submission; onLog: () => void }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-4 rounded-panel border border-line bg-surface px-5 py-4">
+      <div>
+        <p className="text-sm text-ink-3">
+          Call {sub.broker.name}, {sub.broker.firm}
+        </p>
+        <p className="font-mono text-2xl">{sub.broker.phone}</p>
+        <p className="mt-1 text-xs text-ink-3">Click-to-call hands off to your phone system. Off in this prototype.</p>
+      </div>
+      <Button variant="primary" onClick={onLog}>
+        <Phone aria-hidden size={13} /> I called, log it
+      </Button>
+    </div>
+  )
+}
+
 function FollowUpSection({ sub }: { sub: Submission }) {
-  const { day, sent, followChoice, drafts, editing } = useProto()
+  const { day, sent, followChoice, drafts, editing, decisions, suggestions } = useProto()
   const go = useProto((s) => s.go)
   const chooseFollow = useProto((s) => s.chooseFollow)
   const sendFollowUp = useProto((s) => s.sendFollowUp)
+  const sendRequest = useProto((s) => s.sendRequest)
   const logCall = useProto((s) => s.logCall)
   const wait = useProto((s) => s.wait)
   const setDraft = useProto((s) => s.setDraft)
@@ -728,47 +952,78 @@ function FollowUpSection({ sub }: { sub: Submission }) {
   const choice = followChoice[sub.id]
   const followKey = `${sub.id}:followup`
   const first = sub.broker.name.split(' ')[0]
+  const diffs = sub.diffs ?? []
+  const allDecided = diffs.length > 0 && diffs.every((d) => decisions[decisionKey(sub.id, d.id)])
+  const realDiffs = diffs.filter((d) => decisions[decisionKey(sub.id, d.id)] === 'real')
+  const mismatchDraft = sub.status === 'mismatch' && allDecided && realDiffs.length > 0
+  const missingDraft = sub.status === 'missing'
+  const missingItem = getChecklist(sub).find((c) => c.state === 'missing')
 
   return (
-    <section id="sec-followup" aria-labelledby="h-followup">
-      <SectionHead id="followup" title="Follow-up" />
-      <div data-decision="followup" className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-panel border border-line bg-surface px-5 py-3 shadow-card">
-          <label className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="font-semibold">Follow up after</span>
-            <select value={sub.followUpDays} onChange={(e) => setFollowUpDays(sub.id, Number(e.target.value))} className="h-8 rounded-full border border-line-strong bg-surface pl-3 pr-7 text-sm hover:border-ink-3">
-              <option value={1}>1 day</option>
-              <option value={2}>2 days</option>
-              <option value={3}>3 days</option>
-            </select>
-            <span className="text-ink-3">without a reply from {first}. Set for this policy only.</span>
-          </label>
-          {waiting && <span className="text-sm text-ink-2">{overdue ? 'Due now' : `Next nudge ${fmtDay(nextPrompt(sub))}`}</span>}
-        </div>
+    <div data-decision="followup" className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-line bg-canvas px-4 py-2.5">
+        <label className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="font-semibold">Follow up after</span>
+          <select value={sub.followUpDays} onChange={(e) => setFollowUpDays(sub.id, Number(e.target.value))} className="h-8 rounded-full border border-line-strong bg-surface pl-3 pr-7 text-sm hover:border-ink-3">
+            <option value={1}>1 day</option>
+            <option value={2}>2 days</option>
+            <option value={3}>3 days</option>
+          </select>
+          <span className="text-ink-3">without a reply from {first}. Set for this policy only.</span>
+        </label>
+        {waiting && <span className="text-sm text-ink-2">{overdue ? 'Due now' : `Next nudge ${fmtDay(nextPrompt(sub))}`}</span>}
+      </div>
 
-        {!waiting && (
-          <p className="rounded-card border border-dashed border-line-strong bg-canvas px-5 py-4 text-sm text-ink-2">
-            {sub.status === 'bound' || sub.status === 'ready' ? 'No follow-up needed. Nothing is waiting on the broker.' : 'Nothing has gone to the broker yet. The timer starts when you send a request.'}
-          </p>
-        )}
-
-        {justSent && (
-          <div role="status" className="flex flex-wrap items-start gap-4 rounded-panel border border-success-line bg-surface px-5 py-4 shadow-card">
-            <DrawnCheck />
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold">{justSent.kind === 'call' ? `Call with ${sub.broker.name} logged` : `${justSent.kind === 'followup' ? 'Follow-up' : 'Email'} sent to ${sub.broker.name}`}</p>
-              <p className="mt-0.5 text-sm text-ink-2">
-                Timer started {fmtDay(day)}. With no reply, this comes back to the top of Home on {fmtDay(day + sub.followUpDays)}.
-              </p>
-              <p className="mt-1 text-xs text-ink-3">Prototype only. Nothing left this page.</p>
-            </div>
-            <Button variant="secondary" onClick={() => go({ name: 'home' })}>
-              Back to Home
-            </Button>
+      {justSent && (
+        <div role="status" className="flex flex-wrap items-start gap-4 rounded-panel border border-success-line bg-surface px-5 py-4">
+          <DrawnCheck />
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold">{justSent.kind === 'call' ? `Call with ${sub.broker.name} logged` : `${justSent.kind === 'followup' ? 'Follow-up' : 'Email'} sent to ${sub.broker.name}`}</p>
+            <p className="mt-0.5 text-sm text-ink-2">
+              Timer started {fmtDay(day)}. With no reply, this comes back to the top of Home on {fmtDay(day + sub.followUpDays)}.
+            </p>
+            <p className="mt-1 text-xs text-ink-3">Prototype only. Nothing left this page.</p>
           </div>
-        )}
+          <Button variant="secondary" onClick={() => go({ name: 'home' })}>
+            Back to Home
+          </Button>
+        </div>
+      )}
 
-        {waiting && (
+      {mismatchDraft && (
+        <div data-decision="email">
+          <EmailDraft
+            text={drafts[sub.id] ?? buildRequestDraft(sub, decisions, {})}
+            editing={editing === sub.id}
+            onEdit={(on) => setEditing(on ? sub.id : null)}
+            onChange={(t) => setDraft(sub.id, t)}
+            onSend={() => sendRequest(sub.id)}
+            sendLabel={`Send to ${first}`}
+            evidence={realDiffs.map((d) => `${d.field}: ${d.right} (certificate) vs ${d.left} (application)`)}
+          />
+        </div>
+      )}
+      {sub.status === 'mismatch' && !allDecided && (
+        <p className="rounded-card border border-dashed border-line-strong px-4 py-3 text-sm text-ink-2">The broker email is drafted here once every difference in step 2 is marked.</p>
+      )}
+      {missingDraft && (
+        <div data-decision="email">
+          <EmailDraft
+            text={drafts[sub.id] ?? buildRequestDraft(sub, {}, suggestions)}
+            editing={editing === sub.id}
+            onEdit={(on) => setEditing(on ? sub.id : null)}
+            onChange={(t) => setDraft(sub.id, t)}
+            onSend={() => sendRequest(sub.id)}
+            sendLabel={`Send to ${first}`}
+            title="Request for the missing document"
+            did="Drafted a request for the missing document"
+            evidence={[`Checklist item "${missingItem?.label ?? 'Missing document'}" is empty`, 'No matching document in portal, inbox or uploads']}
+          />
+        </div>
+      )}
+
+      {waiting && (
+        <>
           <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-card border border-line bg-line text-sm sm:grid-cols-4">
             {[
               ['First asked', sub.waitingSince !== undefined ? fmtDay(sub.waitingSince) : '–'],
@@ -782,15 +1037,17 @@ function FollowUpSection({ sub }: { sub: Submission }) {
               </div>
             ))}
           </dl>
-        )}
-        {waiting && sub.askedFor && (
-          <p className="text-sm text-ink-2">
-            <span className="font-semibold text-ink">You asked for</span> {sub.askedFor}.
-          </p>
-        )}
+          {sub.askedFor && (
+            <p className="text-sm text-ink-2">
+              <span className="font-semibold text-ink">You asked for</span> {sub.askedFor}.
+            </p>
+          )}
+        </>
+      )}
 
-        {overdue && (
-          <div className="rounded-panel border border-warning-line bg-surface shadow-card">
+      {overdue ? (
+        <>
+          <div className="rounded-panel border border-warning-line bg-surface">
             <p className="border-b border-line px-5 py-3 text-base font-semibold">
               No reply for <Counter value={day - (sub.lastContact ?? day)} /> days. What do you want to do?
             </p>
@@ -819,39 +1076,28 @@ function FollowUpSection({ sub }: { sub: Submission }) {
               })}
             </div>
           </div>
-        )}
-        {overdue && choice === 'email' && (
-          <div data-decision="email">
-            <EmailDraft
-              key="followup"
-              text={drafts[followKey] ?? buildFollowUpDraft(sub)}
-              editing={editing === followKey}
-              onEdit={(on) => setEditing(on ? followKey : null)}
-              onChange={(t) => setDraft(followKey, t)}
-              onSend={() => sendFollowUp(sub.id)}
-              sendLabel="Send follow-up"
-              title="Follow-up draft"
-              did="Drafted a follow-up citing your original request"
-              evidence={[`Original request sent ${fmtDay(sub.waitingSince ?? day)}`, `Asked for: ${sub.askedFor}`, `${day - (sub.lastContact ?? day)} days without a reply`]}
-            />
-          </div>
-        )}
-        {overdue && choice === 'call' && (
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-panel border border-line bg-surface px-5 py-4 shadow-card">
-            <div>
-              <p className="text-sm text-ink-3">
-                Call {sub.broker.name}, {sub.broker.firm}
-              </p>
-              <p className="font-mono text-2xl">{sub.broker.phone}</p>
-              <p className="mt-1 text-xs text-ink-3">Click-to-call hands off to your phone system. Disabled in this prototype.</p>
+          {choice === 'email' && (
+            <div data-decision="email">
+              <EmailDraft
+                key="followup"
+                text={drafts[followKey] ?? buildFollowUpDraft(sub)}
+                editing={editing === followKey}
+                onEdit={(on) => setEditing(on ? followKey : null)}
+                onChange={(t) => setDraft(followKey, t)}
+                onSend={() => sendFollowUp(sub.id)}
+                sendLabel="Send follow-up"
+                title="Follow-up draft"
+                did="Drafted a follow-up citing your original request"
+                evidence={[`Original request sent ${fmtDay(sub.waitingSince ?? day)}`, `Asked for: ${sub.askedFor}`, `${day - (sub.lastContact ?? day)} days without a reply`]}
+              />
             </div>
-            <Button variant="primary" onClick={() => logCall(sub.id)}>
-              <Phone aria-hidden size={13} /> I called, log it
-            </Button>
-          </div>
-        )}
-      </div>
-    </section>
+          )}
+          {choice === 'call' && <CallPanel sub={sub} onLog={() => logCall(sub.id)} />}
+        </>
+      ) : (
+        !mismatchDraft && !missingDraft && !(sub.status === 'mismatch' && !allDecided) && <ContactChooser key={`${sub.id}-${sub.status}`} sub={sub} />
+      )}
+    </div>
   )
 }
 
@@ -874,8 +1120,7 @@ function BindSection({ sub }: { sub: Submission }) {
   const limits = sub.application.fields.filter((f) => f.value.startsWith('$'))
   const open = getChecklist(sub).filter((c) => c.state !== 'done')
   return (
-    <section id="sec-bind" aria-labelledby="h-bind">
-      <SectionHead id="bind" title="Final review and bind" />
+    <section aria-label="Final review and bind">
       <div data-decision="bind">
         {!ready && !bound ? (
           <div className="rounded-panel border border-dashed border-line-strong bg-canvas px-5 py-4 text-sm text-ink-2">

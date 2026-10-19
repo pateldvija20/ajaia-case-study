@@ -7,9 +7,9 @@ import { Button } from './ui'
 export const TOUR: { frame: FrameId; title: string; look: string }[] = [
   { frame: '1a', title: 'Capture', look: 'The panel finds documents already in the web inbox and matches each one to an application.' },
   { frame: '1b', title: 'Low-confidence match', look: 'At 40% the tool stops and asks. Change the application if the guess is wrong. Click any document to preview it.' },
-  { frame: '2a', title: 'Home', look: 'Open work grouped by status. Each row says the next step in a sentence with a link.' },
-  { frame: '3a', title: 'Compare', look: 'Application and certificate side by side, differences in their own column. Click a highlight to bring it to the top.' },
-  { frame: '4a', title: 'Drafted email', look: 'Only what you marked real goes into the email, with both values cited. You edit and send.' },
+  { frame: '2a', title: 'This week', look: 'Open, In review and Closed tabs, grouped by status. Each row says the next step in a sentence with a link.' },
+  { frame: '3a', title: 'Status steps', look: 'Each application is four steps. Step 2 puts the application and certificate side by side; click a highlight to bring its difference to the top.' },
+  { frame: '4a', title: 'Drafted email', look: 'Step 3 drafts the email from what you marked real, with both values cited. You edit and send.' },
   { frame: '4c', title: 'Follow-up timer', look: 'Sent. The timer runs on the threshold set for this policy.' },
   { frame: '5a', title: 'Overdue', look: 'Two days later Harbor Line is Overdue and moves up Home.' },
   { frame: '5b', title: 'Follow-up', look: 'Choose to email, call or wait. The follow-up is drafted from the original request.' },

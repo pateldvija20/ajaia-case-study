@@ -174,6 +174,7 @@ function CapturePanel({ onClose }: { onClose: () => void }) {
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3">Bind Desk · Capture</p>
             <h2 className="mt-0.5 font-display text-[22px] leading-7">{docs.length} documents found in this inbox</h2>
+            <p className="mt-1 text-sm text-ink-2">Check each match. Click a document to preview it or change its application.</p>
           </div>
           <button onClick={onClose} aria-label="Close panel" className="grid h-8 w-8 place-items-center rounded-full hover:bg-muted">
             <X aria-hidden size={16} />
@@ -181,18 +182,7 @@ function CapturePanel({ onClose }: { onClose: () => void }) {
         </header>
 
         <div className="min-h-0 flex-1 overflow-auto px-5 py-4">
-          <p className="mb-3 text-xs text-ink-3">Click a document to preview it.</p>
           <div data-decision="ai-tag" className="mb-3 space-y-1.5">
-            <AiTag
-              variant="Integration"
-              did="Reads attachments and portal files on this page"
-              review="Automatic"
-              why={{
-                evidence: ['Open web inbox (this tab)', 'Keystone Commercial broker portal notifications'],
-                approval: 'Read-only. Nothing is moved, replied to or deleted in your inbox.',
-                audit: ['Tue 14 Apr 09:30 · 5 messages scanned', `${docs.length} documents detected`],
-              }}
-            />
             <AiTag
               variant="Document intelligence"
               did="Named each document type and matched it to a submission"
@@ -254,6 +244,8 @@ function DocRow({
   const ring = useRef<HTMLSpanElement>(null)
   const match = subs.find((s) => s.id === doc.matchId)
   const uncertain = doc.state === 'uncertain'
+  const settled = doc.state === 'confirmed' || doc.state === 'reassigned'
+  const expanded = uncertain || picking || (previewing && !settled)
 
   // Morph: old text leaves, the chip reshapes, new text enters ~80 ms into the reshape.
   const [shown, setShown] = useState(resolved)
@@ -284,12 +276,15 @@ function DocRow({
     <li
       data-doc-row={doc.id}
       data-decision={uncertain ? 'low-confidence' : undefined}
-      className={`relative rounded-card border p-3 transition-colors ${previewing ? 'border-ink ring-1 ring-ink' : uncertain && shown ? 'border-warning-line' : 'border-line hover:border-line-strong'} ${uncertain && shown ? 'bg-[#fffaf2]' : 'bg-surface'}`}
+      className={`relative rounded-card border bg-surface p-3 transition-colors ${previewing ? 'border-ink ring-1 ring-ink' : 'border-line hover:border-line-strong'}`}
     >
-      <span ref={ring} aria-hidden className="pointer-events-none absolute -inset-[3px] rounded-[12px] border-2 border-warning opacity-0" />
+      <span ref={ring} aria-hidden className="pointer-events-none absolute -inset-[3px] rounded-[12px] border-2 border-ink opacity-0" />
       <div className="flex items-start gap-3">
         <FileText aria-hidden size={18} className="mt-0.5 shrink-0 text-ink-3" />
         <div className="min-w-0 flex-1">
+          {uncertain && shown && (
+            <span className="float-right ml-2 inline-flex h-5 items-center rounded-full border border-warning-line bg-warning-bg px-2 text-[11px] font-medium text-warning">Needs review</span>
+          )}
           <button onClick={onPreview} aria-pressed={previewing} className="block w-full text-left" title="Preview this document">
             <span className="block truncate font-mono text-[13px] text-ink underline decoration-transparent underline-offset-2 hover:decoration-ink-3">{doc.file}</span>
             <span className="block text-xs text-ink-3">
@@ -305,8 +300,8 @@ function DocRow({
               </span>
             ) : (
               <span key="matched" ref={chip} className="flex flex-wrap items-center gap-1.5">
-                <span className={`relative inline-flex h-6 items-center gap-1 px-2 text-xs font-medium ${uncertain ? 'text-warning' : 'text-ink'}`}>
-                  <span data-chip-bg aria-hidden className={`absolute inset-0 rounded-full border ${uncertain ? 'border-warning-line bg-warning-bg' : 'border-line bg-muted'}`} />
+                <span className="relative inline-flex h-6 items-center gap-1 px-2 text-xs font-medium text-ink">
+                  <span data-chip-bg aria-hidden className="absolute inset-0 rounded-full border border-line bg-muted" />
                   <span data-chip-txt className="relative">
                     {uncertain ? 'Possible match:' : '→'} {match?.client}
                   </span>
@@ -321,14 +316,18 @@ function DocRow({
               </span>
             )}
           </div>
-          {shown && !picking && !uncertain && (
+          {shown && !expanded && (
             <button onClick={() => setPicking(true)} className="mt-1.5 text-xs text-ink-3 underline underline-offset-2 hover:text-ink">
               Change application
             </button>
           )}
-          {shown && (uncertain || picking) && (
+          {shown && expanded && (
             <div className="mt-2.5">
-              {uncertain && <p className="text-xs text-ink-2">Only {Math.round(doc.confidence * 100)}% sure. "HL" could be Harborview Freight Co. or Harbor Line Logistics.</p>}
+              <p className="text-xs text-ink-2">
+                {uncertain
+                  ? `Only ${Math.round(doc.confidence * 100)}% sure. "HL" could be Harborview Freight Co. or Harbor Line Logistics.`
+                  : `Matched to ${match?.client} at ${Math.round(doc.confidence * 100)}%. Pick another application if this is wrong.`}
+              </p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <label className="sr-only" htmlFor={`app-${doc.id}`}>
                   Application for {doc.file}
@@ -358,7 +357,7 @@ function DocRow({
                 >
                   Confirm
                 </Button>
-                {picking && !uncertain && (
+                {picking && !uncertain && !previewing && (
                   <Button variant="ghost" onClick={() => setPicking(false)}>
                     Cancel
                   </Button>

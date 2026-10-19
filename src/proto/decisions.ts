@@ -4,9 +4,9 @@
  * Approved by the author; edit wording here only.
  */
 export const DECISIONS: Record<string, { area: string; text: string }> = {
-  home: { area: 'Home', text: 'Sorted by what blocks binding, with a tab per status, so mismatches and stuck brokers surface before routine work.' },
+  home: { area: 'This week', text: 'The week as Open, In review and Closed, grouped by what blocks binding, so mismatches and stuck brokers surface before routine work.' },
   'next-step': { area: 'Next-step message', text: 'Each row says what to do in words, so the list reads as a to-do list rather than a report.' },
-  capture: { area: 'Capture panel', text: 'Documents are picked up where they already arrive, so nobody hunts through four channels.' },
+  capture: { area: 'Capture panel', text: 'Documents are picked up where they already arrive, so nobody hunts through four channels. It only reads this inbox and its portal notices; nothing is moved or replied to.' },
   'low-confidence': { area: 'Low-confidence match', text: 'When unsure, the tool asks; a person decides which application a document belongs to.' },
   compare: { area: 'Side-by-side documents', text: 'Both values sit next to each other, so careful reading becomes confirming.' },
   differences: { area: 'Differences column', text: 'The tool only highlights; a person marks every difference real or acceptable.' },

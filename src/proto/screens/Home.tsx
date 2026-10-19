@@ -1,10 +1,7 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react'
-import { ArrowRight, ChevronDown } from 'lucide-react'
+import { type ReactNode } from 'react'
+import { ArrowRight } from 'lucide-react'
 import { useProto } from '../store'
 import { daysWaiting, displayStatus, fmtDay, getChecklist, nextPrompt, STATUS_ORDER, STATUS_WORD, type DisplayStatus } from '../logic'
-import { flipBus } from '../flipBus'
-import { Flip, gsap, prefersReduced, useGSAP, useIndicator, withMotion } from '../motion'
-import { Counter } from '../components/ui'
 import type { AppSection, Submission } from '../types'
 
 /** Inline call to action inside a sentence. */
@@ -47,7 +44,7 @@ export function NextStep({ sub }: { sub: Submission }) {
     case 'missing': {
       const item = getChecklist(sub).find((c) => c.state === 'missing')
       msg = `${item?.label ?? 'A required document'} has not arrived.`
-      ctas = <InlineLink onClick={to('checklist')}>Ask {first} for it</InlineLink>
+      ctas = <InlineLink onClick={to('followup')}>Ask {first} for it</InlineLink>
       break
     }
     case 'overdue':
@@ -209,155 +206,3 @@ export function byStatusThenAge(day: number, sort: 'oldest' | 'newest' = 'oldest
     (sort === 'oldest' ? a.receivedDay - b.receivedDay : b.receivedDay - a.receivedDay)
 }
 
-export function Home() {
-  const { subs, day, pendingMove, epoch, homeFilter, homeSort } = useProto()
-  const setFilter = useProto((s) => s.setHomeFilter)
-  const setSort = useProto((s) => s.setHomeSort)
-  const clearPendingMove = useProto((s) => s.clearPendingMove)
-  const root = useRef<HTMLDivElement>(null)
-  const tabsRef = useRef<HTMLDivElement>(null)
-  const flipState = useRef<Flip.FlipState | null>(null)
-  useIndicator(tabsRef, homeFilter)
-
-  // While a move is pending, show the row as it was, then let it move.
-  const display = useMemo(
-    () => subs.map((s) => (pendingMove?.id === s.id ? { ...s, status: pendingMove.from, reason: pendingMove.fromReason } : s)),
-    [subs, pendingMove],
-  )
-  const open = display.filter((s) => s.status !== 'bound')
-  const counts = Object.fromEntries(STATUS_ORDER.map((k) => [k, open.filter((s) => displayStatus(s, day) === k).length])) as Record<DisplayStatus, number>
-  const rows = open.filter((s) => homeFilter === 'all' || displayStatus(s, day) === homeFilter).sort(byStatusThenAge(day, homeSort))
-  const orderKey = rows.map((r) => r.id + displayStatus(r, day)).join('|')
-  useEffect(
-    () =>
-      flipBus.register(() => {
-        if (!root.current) return
-        const rows = root.current.querySelectorAll('[data-flip-id]')
-        gsap.killTweensOf(rows)
-        gsap.set(rows, { clearProps: 'transform,opacity' })
-        flipState.current = Flip.getState(rows)
-      }),
-    [],
-  )
-
-  useLayoutEffect(() => {
-    const state = flipState.current
-    flipState.current = null
-    if (!state || prefersReduced()) return
-    Flip.from(state, {
-      targets: root.current?.querySelectorAll('[data-flip-id]'),
-      duration: 0.45,
-      ease: 'power2.inOut',
-      simple: true,
-      onEnter: (els) => gsap.fromTo(els, { opacity: 0 }, { opacity: 1, duration: 0.3 }),
-    })
-  }, [orderKey])
-
-  useEffect(() => {
-    if (!pendingMove) return
-    const row = root.current?.querySelector<HTMLElement>(`[data-flip-id="${pendingMove.id}"]`)
-    const target = subs.find((s) => s.id === pendingMove.id)
-    if (prefersReduced() || !row || !target) {
-      clearPendingMove()
-      return
-    }
-    const t = window.setTimeout(() => {
-      if (target.status === 'bound') {
-        gsap.to(row, {
-          opacity: 0,
-          x: 24,
-          duration: 0.3,
-          ease: 'power2.in',
-          onComplete: () => {
-            flipBus.capture()
-            clearPendingMove()
-          },
-        })
-      } else {
-        flipBus.capture()
-        clearPendingMove()
-      }
-    }, 900)
-    return () => window.clearTimeout(t)
-  }, [pendingMove, subs, clearPendingMove])
-
-  useGSAP(
-    () =>
-      withMotion(() => {
-        gsap.from('[data-enter]', { opacity: 0, y: 6, duration: 0.35, stagger: 0.035, ease: 'power3.out' })
-      }),
-    { scope: root, revertOnUpdate: true, dependencies: [epoch] },
-  )
-
-  const needYou = counts.mismatch + counts.missing + counts.overdue
-  const boxes: { label: string; n: number; tone: string; note?: string }[] = [
-    { label: 'Mismatch', n: counts.mismatch, tone: 'text-danger' },
-    { label: 'Missing', n: counts.missing, tone: 'text-info' },
-    { label: 'Waiting', n: counts.waiting + counts.overdue, tone: 'text-warning', note: counts.overdue ? `${counts.overdue} overdue` : undefined },
-    { label: 'Ready', n: counts.ready, tone: 'text-success' },
-  ]
-  const tabs: (DisplayStatus | 'all')[] = ['all', 'mismatch', 'missing', 'overdue', 'waiting', 'ready']
-
-  return (
-    <div ref={root} data-decision="home" className="mx-auto w-full max-w-[1120px] px-4 pb-10 pt-6 md:px-8">
-      <header data-enter>
-        <h1 className="font-display text-[32px] leading-10 tracking-[-0.01em]">Open applications</h1>
-        <p className="mt-0.5 text-sm text-ink-2">
-          {fmtDay(day)} · {needYou} need you, {counts.waiting} {counts.waiting === 1 ? 'is' : 'are'} with brokers, {counts.ready} {counts.ready === 1 ? 'is' : 'are'} ready to bind
-        </p>
-      </header>
-
-      <dl data-enter className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-card border border-line bg-line md:grid-cols-4">
-        {boxes.map((b) => (
-          <div key={b.label} className="bg-surface px-4 py-3">
-            <dt className="text-xs text-ink-3">{b.label}</dt>
-            <dd className="mt-0.5 flex items-baseline gap-2">
-              <Counter value={b.n} className={`font-display text-[30px] leading-9 ${b.n ? b.tone : 'text-ink-3'}`} />
-              {b.note && <span className="text-xs text-warning">{b.note}</span>}
-            </dd>
-          </div>
-        ))}
-      </dl>
-
-      <div data-enter className="mt-6 flex flex-wrap items-end justify-between gap-3 border-b border-line">
-        <div ref={tabsRef} role="tablist" aria-label="Filter by status" className="relative -mb-px flex gap-5 overflow-x-auto">
-          <span data-indicator aria-hidden className="absolute bottom-0 left-0 h-0.5 w-px origin-left bg-ink opacity-0" />
-          {tabs.map((t) => {
-            const on = homeFilter === t
-            const n = t === 'all' ? open.length : counts[t]
-            return (
-              <button
-                key={t}
-                role="tab"
-                aria-selected={on}
-                data-active={on}
-                onClick={() => setFilter(t)}
-                className={`flex shrink-0 items-center gap-1.5 pb-2.5 pt-1 text-sm font-medium transition-colors ${on ? 'text-ink' : 'text-ink-3 hover:text-ink'}`}
-              >
-                {t !== 'all' && <span aria-hidden className={`h-2 w-2 rounded-full ${DOT[t]}`} />}
-                {t === 'all' ? 'All' : STATUS_WORD[t]}
-                <span className="rounded-full bg-muted px-1.5 text-xs tabular-nums text-ink-2">{n}</span>
-              </button>
-            )
-          })}
-        </div>
-        <label className="relative mb-2 inline-flex h-8 items-center rounded-full border border-line-strong bg-surface pl-3 text-sm transition-colors focus-within:border-ink hover:border-ink-3">
-          <span className="text-ink-3">Sort</span>
-          <select
-            value={homeSort}
-            onChange={(e) => setSort(e.target.value as 'oldest' | 'newest')}
-            className="h-full cursor-pointer appearance-none bg-transparent pl-2 pr-8 font-medium text-ink outline-none"
-          >
-            <option value="oldest">Oldest first</option>
-            <option value="newest">Newest first</option>
-          </select>
-          <ChevronDown aria-hidden size={14} className="pointer-events-none absolute right-3 text-ink-3" />
-        </label>
-      </div>
-
-      <div className="mt-4">
-        <StatusTable rows={rows} label="Open applications" empty="Nothing in this tab." />
-      </div>
-    </div>
-  )
-}

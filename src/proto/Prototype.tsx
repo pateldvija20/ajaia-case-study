@@ -9,7 +9,6 @@ import { fmtDay } from './logic'
 import { gsap, prefersReduced, useGSAP, withMotion } from './motion'
 import { TourCard, TOUR } from './components/Tour'
 import { ProtoFooter } from './components/ui'
-import { Home } from './screens/Home'
 import { Applications } from './screens/Applications'
 import { AppDetail } from './screens/AppDetail'
 import { Capture } from './screens/Capture'
@@ -241,13 +240,13 @@ function Stage() {
 
   return (
     <main
-      className="flex min-h-0 flex-1 items-stretch justify-center p-0 lg:p-6"
+      className="flex min-h-0 flex-1 items-stretch"
       onPointerOver={track}
       onFocusCapture={track}
       onPointerLeave={() => setHover(null)}
       onBlurCapture={() => setHover(null)}
     >
-      <div className="flex min-h-0 w-full max-w-[1320px] flex-col overflow-hidden bg-canvas lg:rounded-[16px] lg:border-[10px] lg:border-[#1c1c1b] lg:shadow-[0_20px_50px_rgb(0_0_0/0.18)]">
+      <div className="flex min-h-0 w-full flex-col overflow-hidden bg-canvas lg:border-[10px] lg:border-l-0 lg:border-[#1c1c1b]">
         <BrowserChrome />
         <div className="relative min-h-0 flex-1 overflow-hidden">
           {screen.name === 'capture' ? <Capture /> : screen.name === 'app' ? <AppDetail key={screen.id} id={screen.id} /> : <AppShell />}
@@ -309,7 +308,7 @@ function AppShell() {
             </button>
           ))}
         </nav>
-        <div className="flex-1">{screen.name === 'applications' ? <Applications /> : <Home />}</div>
+        <div className="flex-1">{screen.name === 'applications' ? <Applications /> : <Applications key="week" week />}</div>
         <ProtoFooter />
       </div>
     </div>

@@ -91,3 +91,9 @@ Three worst problems found and fixed:
 Changes from the author: All applications drops the status column and colors each status group row instead; Home keeps its table and gains status-colored dots on its tabs. The application screen loses its side panel; the four status cards (Checklist, Docs, Follow-up, Bind) are now tabs that show one section at a time, under a back link, the client name, three tinted client-information tiles (Policy, Broker, Handling) and the next step. The date sits outside a box as three outlined controls.
 
 Scores held at 8 across the five criteria. Fixes made while checking: next-step links no longer break mid-label (`whitespace-nowrap`), tab switches animate only the incoming section, and the date drops the year so it fits its box.
+
+## Round 7 (status stepper, weekly Home, capture rows)
+
+Changes from the author: laptop frame edge to edge; Home is the same Open · In review · Closed board as All applications, scoped to this week, with the overview counts; capture drops the Integration tag, gains a subtitle, expands the selected row with the application picker and marks the 40% row with a pill instead of color; the prototype credits Dvija Patel; client information is plain white. The application page has Status and All documents tabs. Status is a four-step stepper (Checklist, Document mismatch, Follow-up, Final review and bind) with collapsible steps, a number that turns into a green tick, and a next-step line that stays visible when collapsed. Step 3 holds every follow-up: the mismatch email, the missing-document request, overdue chasing, and a write-or-call option for anything else. All documents is a table whose rows expand to a preview.
+
+Scores held at 8. Fixed while checking: the Harbor Line checklist line read as a run-on label, and the Home decision and tour copy still described status tabs.

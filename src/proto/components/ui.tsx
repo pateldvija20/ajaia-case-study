@@ -83,8 +83,8 @@ export function ProtoFooter() {
         <Lock aria-hidden size={12} />
         Processed in a private environment
       </span>
-      <a href="https://ajaia.ai" target="_blank" rel="noreferrer" className="hover:text-ink hover:underline">
-        Built with Ajaia · ajaia.ai
+      <a href="https://pateldvija20.vercel.app" target="_blank" rel="noreferrer" className="hover:text-ink hover:underline">
+        Built by Dvija Patel
       </a>
     </footer>
   )

@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { CAPTURE_DOCS, FAX_DOC, SUBMISSIONS } from './mockData'
 import { buildFollowUpDraft, buildRequestDraft, decisionKey, fmtDay, type DisplayStatus } from './logic'
 import { flipBus } from './flipBus'
-import type { AppSection, CaptureDoc, Decision, Screen, Status, Submission } from './types'
+import type { AppSection, AppsTab, CaptureDoc, Decision, Screen, Status, Submission } from './types'
 
 export type ScenarioId = 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
 export type FrameId =
@@ -17,6 +17,7 @@ export interface Data {
   device: Device
   subs: Submission[]
   homeFilter: DisplayStatus | 'all'
+  homeTab: AppsTab
   homeSort: 'oldest' | 'newest'
   range: RangeId
   docsTab: Record<string, 'compare' | 'all'>
@@ -59,6 +60,7 @@ interface Actions {
   setFollowUpDays: (subId: string, n: number) => void
   setDevice: (d: Device) => void
   setHomeFilter: (f: DisplayStatus | 'all') => void
+  setHomeTab: (t: AppsTab) => void
   setHomeSort: (s: 'oldest' | 'newest') => void
   setRange: (r: RangeId) => void
   setDocsTab: (subId: string, t: 'compare' | 'all') => void
@@ -94,6 +96,7 @@ export function seed(): Data {
     device: 'desktop',
     subs: clone(SUBMISSIONS),
     homeFilter: 'all',
+    homeTab: 'open',
     homeSort: 'oldest',
     range: 'this',
     docsTab: {},
@@ -242,7 +245,7 @@ export const FRAMES: Record<FrameId, { label: string; build: () => Data }> = {
   '3b': { label: 'Application · missing document', build: () => open('pinecrest', 'checklist')(seed()) },
   '4a': {
     label: 'Application · drafted email',
-    build: () => pipe(open('harbor', 'docs'), tDecide('harbor', 'occ', 'real'), tDecide('harbor', 'ins', 'acceptable'), (d) => ({ ...d, scrollTarget: 'draft' }))(seed()),
+    build: () => pipe(open('harbor', 'followup'), tDecide('harbor', 'occ', 'real'), tDecide('harbor', 'ins', 'acceptable'))(seed()),
   },
   '4b': { label: 'Application · editing the draft', build: () => ({ ...FRAMES['4a'].build(), editing: 'harbor' }) },
   '4c': { label: 'Application · sent, timer started', build: () => ({ ...pipe(open('harbor', 'followup'), afterHarborSent)(seed()), pendingMove: null }) },
@@ -312,6 +315,7 @@ export const useProto = create<ProtoState>((set, get) => {
     },
     setDevice: (device) => apply((d) => ({ ...d, device })),
     setHomeFilter: (homeFilter) => apply((d) => ({ ...d, homeFilter })),
+    setHomeTab: (homeTab) => apply((d) => ({ ...d, homeTab })),
     setHomeSort: (homeSort) => {
       flipBus.capture()
       apply((d) => ({ ...d, homeSort }))
