@@ -503,7 +503,7 @@ function WaitingView({ sub }: { sub: Submission }) {
               <p className="mt-0.5 text-sm text-ink-2">
                 Follow-up timer started on {fmtDay(day)}. If there is no reply, this comes back to the top of your list on {fmtDay(day + threshold)}.
               </p>
-              <p className="mt-1 text-xs text-ink-3">Demo only: nothing actually left this page.</p>
+              <p className="mt-1 text-xs text-ink-3">Demo only. Nothing left this page.</p>
             </div>
             <Button variant="secondary" onClick={() => go({ name: 'dashboard', tab: 'week' })}>
               Back to dashboard
